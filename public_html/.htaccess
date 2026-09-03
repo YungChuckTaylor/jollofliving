@@ -1,0 +1,119 @@
+# ==========================================================================
+# Jollof Living — Apache configuration for HostGator shared hosting
+# ==========================================================================
+
+# ---------------------------------------------------------------- defaults
+DirectoryIndex index.php index.html
+Options -Indexes
+AddDefaultCharset UTF-8
+
+# --------------------------------------------------------------- rewriting
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    # If the site lives in a sub-folder, change this to /subfolder/
+    RewriteBase /
+
+    # Force HTTPS (comment out until your SSL certificate is issued)
+    RewriteCond %{HTTPS} !=on
+    RewriteCond %{HTTP:X-Forwarded-Proto} !https
+    RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
+
+    # Canonical host: send the bare domain to www (swap the rule to prefer bare)
+    RewriteCond %{HTTP_HOST} ^jollofliving\.com$ [NC]
+    RewriteRule ^(.*)$ https://www.jollofliving.com/$1 [R=301,L]
+
+    # ------------------------------------------------------- pretty URLs
+    # /stay/onyx            -> stay.php?p=onyx
+    # /booking/onyx         -> booking.php?p=onyx
+    # /confirm/JL-2026-1234 -> confirm.php?ref=JL-2026-1234
+    # /neighborhood/ikoyi   -> neighborhood.php?n=ikoyi
+    # /blog/jollof-100      -> blog-post.php?s=jollof-100
+    RewriteRule ^stay/([A-Za-z0-9_-]+)/?$          stay.php?p=$1          [L,QSA]
+    RewriteRule ^booking/([A-Za-z0-9_-]+)/?$       booking.php?p=$1       [L,QSA]
+    RewriteRule ^confirm/([A-Za-z0-9_-]+)/?$       confirm.php?ref=$1     [L,QSA]
+    RewriteRule ^neighborhood/([A-Za-z0-9_-]+)/?$  neighborhood.php?n=$1  [L,QSA]
+    RewriteRule ^blog/([A-Za-z0-9_-]+)/?$          blog-post.php?s=$1     [L,QSA]
+    RewriteRule ^host/onboarding/?$                host-onboarding.php    [L,QSA]
+    RewriteRule ^host/dashboard/?$                 host-dashboard.php     [L,QSA]
+
+    # Old static .html bookmarks keep working
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^([A-Za-z0-9_-]+)\.html$ $1.php [R=301,L,QSA]
+
+    # Extensionless URLs: /stays -> stays.php
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI}.php -f
+    RewriteRule ^(.+?)/?$ $1.php [L,QSA]
+
+    # Anything else that is not a real file -> the 404 page
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ 404.php [L]
+</IfModule>
+
+# ------------------------------------------------------------ error pages
+ErrorDocument 404 /404.php
+ErrorDocument 403 /404.php
+
+# --------------------------------------------------------------- security
+# Never serve the config, the database dumps or version-control metadata.
+<FilesMatch "^(config\.php|config\.sample\.php|.*\.sql|.*\.md|composer\.(json|lock)|\.env.*|\.git.*)$">
+    Require all denied
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^includes/ - [F,L]
+    RewriteRule ^storage/  - [F,L]
+</IfModule>
+
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "geolocation=(self), microphone=(), camera=()"
+    # Enable once you have confirmed the site is fully HTTPS:
+    # Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    Header unset X-Powered-By
+</IfModule>
+
+<IfModule mod_php.c>
+    php_flag display_errors off
+    php_flag log_errors on
+    php_value upload_max_filesize 12M
+    php_value post_max_size 14M
+    php_value max_execution_time 60
+    php_value session.cookie_httponly 1
+    php_value session.use_strict_mode 1
+</IfModule>
+
+# ------------------------------------------------------------ compression
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/css text/javascript
+    AddOutputFilterByType DEFLATE application/javascript application/json
+    AddOutputFilterByType DEFLATE application/xml image/svg+xml
+</IfModule>
+
+# ---------------------------------------------------------------- caching
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/jpeg        "access plus 1 year"
+    ExpiresByType image/png         "access plus 1 year"
+    ExpiresByType image/webp        "access plus 1 year"
+    ExpiresByType image/svg+xml     "access plus 1 year"
+    ExpiresByType font/woff2        "access plus 1 year"
+    # CSS/JS carry a ?v= cache-buster, so a long life is safe
+    ExpiresByType text/css          "access plus 1 year"
+    ExpiresByType application/javascript "access plus 1 year"
+    ExpiresByType text/html         "access plus 0 seconds"
+</IfModule>
+
+<IfModule mod_headers.c>
+    <FilesMatch "\.(jpg|jpeg|png|webp|svg|woff2|css|js)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+    <FilesMatch "\.php$">
+        Header set Cache-Control "no-cache, must-revalidate"
+    </FilesMatch>
+</IfModule>

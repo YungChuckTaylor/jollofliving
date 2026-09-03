@@ -1,0 +1,3 @@
+# The installer is a one-time tool. Delete this folder after installing.
+# To restrict it to your own IP while installing, uncomment and edit:
+# Require ip 197.210.0.0/16

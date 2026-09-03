@@ -1,0 +1,223 @@
+<?php
+/**
+ * Jollof Living — sessions, users, admin gate
+ */
+declare(strict_types=1);
+
+// Defence in depth: these files are libraries, never entry points.
+// .htaccess blocks the folder as well, but a mis-configured host must not leak them.
+if (!defined('JL_ROOT')) {
+    http_response_code(404);
+    exit;
+}
+
+
+final class Auth
+{
+    public static function startSession(): void
+    {
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            return;
+        }
+        $name = (string) config('security.session_name', 'jollof_session');
+        $life = (int) config('security.session_lifetime', 43200);
+        $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+            || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
+
+        session_name($name);
+        session_set_cookie_params([
+            'lifetime' => $life,
+            'path'     => base_path() ?: '/',
+            'secure'   => $secure,
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]);
+        @session_start();
+
+        if (!isset($_SESSION['created'])) {
+            $_SESSION['created'] = time();
+        } elseif (time() - (int) $_SESSION['created'] > $life) {
+            session_unset();
+            session_regenerate_id(true);
+            $_SESSION['created'] = time();
+        }
+    }
+
+    /* ------------------------------------------------------------ user */
+
+    public static function id(): ?int
+    {
+        return isset($_SESSION['uid']) ? (int) $_SESSION['uid'] : null;
+    }
+
+    public static function check(): bool
+    {
+        return self::id() !== null;
+    }
+
+    /** The signed-in user row, or null. */
+    public static function user(): ?array
+    {
+        static $cache = null;
+        static $cachedId = -1;
+        $id = self::id();
+        if ($id === null) {
+            return null;
+        }
+        if ($cachedId === $id) {
+            return $cache;
+        }
+        $cachedId = $id;
+        return $cache = DB::row('SELECT * FROM users WHERE id = ?', [$id]);
+    }
+
+    /** Display name used across the chrome. */
+    public static function displayName(): string
+    {
+        $u = self::user();
+        return $u ? (string) $u['name'] : 'Guest';
+    }
+
+    public static function login(int $userId, bool $isAdmin = false): void
+    {
+        session_regenerate_id(true);
+        $_SESSION['uid'] = $userId;
+        $_SESSION['created'] = time();
+        if ($isAdmin) {
+            $_SESSION['admin'] = 1;
+        }
+        DB::update('users', ['last_login_at' => date('Y-m-d H:i:s')], 'id = :id', ['id' => $userId]);
+    }
+
+    public static function logout(): void
+    {
+        $_SESSION = [];
+        if (ini_get('session.use_cookies')) {
+            $p = session_get_cookie_params();
+            setcookie(session_name(), '', time() - 42000, $p['path'], $p['domain'], (bool) $p['secure'], (bool) $p['httponly']);
+        }
+        session_destroy();
+    }
+
+    /**
+     * Register a new guest. Returns [ok, message, userId].
+     */
+    public static function register(string $name, string $email, string $password, string $phone = ''): array
+    {
+        $name = trim($name);
+        $email = strtolower(trim($email));
+        if ($name === '') {
+            return [false, 'Please enter your name.', 0];
+        }
+        if (!is_email($email)) {
+            return [false, 'Please enter a valid email address.', 0];
+        }
+        if (strlen($password) < 8) {
+            return [false, 'Password must be at least 8 characters.', 0];
+        }
+        if (DB::value('SELECT id FROM users WHERE email = ?', [$email])) {
+            return [false, 'An account with that email already exists.', 0];
+        }
+        $id = DB::insert('users', [
+            'name'          => $name,
+            'email'         => $email,
+            'phone'         => $phone ?: null,
+            'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+            'role'          => 'guest',
+            'tier'          => 'bronze',
+            'points'        => 0,
+            'status'        => 'Pending ID',
+            'status_level'  => 'warn',
+            'referral_code' => strtoupper(preg_replace('~[^A-Za-z]~', '', $name) ?: 'JOLLOF') . random_int(10, 99),
+        ]);
+        DB::insert('wishlists', ['user_id' => $id, 'slug' => 'default', 'name' => 'My wishlist']);
+        audit($email, 'New account created', 'ok');
+        return [true, 'Welcome to Jollof Living.', $id];
+    }
+
+    /**
+     * Attempt a sign in. Returns [ok, message, user|null].
+     */
+    public static function attempt(string $email, string $password): array
+    {
+        $email = strtolower(trim($email));
+        if (self::isLockedOut($email)) {
+            return [false, 'Too many attempts. Please try again in a few minutes.', null];
+        }
+        $u = DB::row('SELECT * FROM users WHERE email = ?', [$email]);
+        $ok = $u && $u['password_hash'] && password_verify($password, (string) $u['password_hash']);
+        self::recordAttempt($email, $ok);
+        if (!$ok) {
+            return [false, 'Those details do not match our records.', null];
+        }
+        if (($u['status_level'] ?? 'ok') === 'bad') {
+            return [false, 'This account is suspended. Please contact support.', null];
+        }
+        self::login((int) $u['id'], ($u['role'] ?? '') === 'admin');
+        return [true, 'Welcome back.', $u];
+    }
+
+    private static function recordAttempt(string $identifier, bool $success): void
+    {
+        try {
+            DB::insert('login_attempts', [
+                'identifier' => mb_substr($identifier, 0, 190),
+                'ip'         => client_ip(),
+                'success'    => $success ? 1 : 0,
+            ]);
+        } catch (Throwable $e) {
+        }
+    }
+
+    private static function isLockedOut(string $identifier): bool
+    {
+        $max = (int) config('security.max_login_attempts', 8);
+        $mins = (int) config('security.lockout_minutes', 15);
+        $since = date('Y-m-d H:i:s', time() - $mins * 60);
+        $n = (int) DB::value(
+            'SELECT COUNT(*) FROM login_attempts WHERE identifier = ? AND success = 0 AND created_at > ?',
+            [$identifier, $since],
+            0
+        );
+        return $n >= $max;
+    }
+
+    /* ----------------------------------------------------------- admin */
+
+    public static function isAdmin(): bool
+    {
+        if (empty($_SESSION['admin'])) {
+            return false;
+        }
+        $u = self::user();
+        return $u !== null && ($u['role'] ?? '') === 'admin';
+    }
+
+    /** Gate an admin page: bounce to the login screen when not signed in. */
+    public static function requireAdmin(): void
+    {
+        if (!self::isAdmin()) {
+            redirect('admin-login.php?next=' . urlencode($_SERVER['REQUEST_URI'] ?? ''));
+        }
+    }
+
+    /** Gate a guest page. */
+    public static function requireLogin(): void
+    {
+        if (!self::check()) {
+            redirect('auth.php?mode=signin&next=' . urlencode($_SERVER['REQUEST_URI'] ?? ''));
+        }
+    }
+
+    /**
+     * Anonymous visitors still get a stable key so wishlist/compare/recent
+     * work before they sign up; it is merged into their account on signup.
+     */
+    public static function sessionKey(): string
+    {
+        if (empty($_SESSION['skey'])) {
+            $_SESSION['skey'] = bin2hex(random_bytes(16));
+        }
+        return $_SESSION['skey'];
+    }
+}
