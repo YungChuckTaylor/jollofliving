@@ -139,12 +139,17 @@ const PAGE_ID = (document.body && document.body.getAttribute("data-page")) || "i
 const qp = (k) => new URLSearchParams(location.search).get(k);
 const qps = () => Object.fromEntries(new URLSearchParams(location.search).entries());
 
-/* turns authoring links (URL("/stays"), data-goto="/stay/onyx") into real page navigation */
+/* turns data-goto="/stay/onyx" into real page navigation.
+   Anchors already carry a resolved href from URL(), so they need no handling
+   here -- and must not be intercepted, or modifier-clicks / open-in-new-tab
+   would break. */
 document.addEventListener("click", (e) => {
-  const a = e.target.closest('a[href^=URL("/")]');
-  if (a) { e.preventDefault(); location.href = URL(a.getAttribute("href").slice(1)); return; }
   const g = e.target.closest("[data-goto]");
-  if (g) { location.href = URL(g.dataset.goto); return; }
+  if (!g) return;
+  // let a nested link, button or control inside the card do its own thing
+  const inner = e.target.closest("a[href], button, input, select, textarea, [data-heart], [data-cmp]");
+  if (inner && inner !== g && g.contains(inner)) return;
+  location.href = URL(g.dataset.goto);
 });
 
 /* ============================================================

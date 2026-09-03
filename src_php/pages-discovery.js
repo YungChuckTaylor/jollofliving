@@ -215,6 +215,10 @@ function bindHome() {
   };
   ["#hRate","#hOcc"].forEach(s=>$(s).addEventListener("input",rcalc));
   rcalc();
+  /* The home page also renders collection tiles, so they need the same
+     binding the dedicated collections page uses -- without this they look
+     clickable but do nothing. */
+  bindCollections();
   /* NOTE: no auto-scroll, no auto-advancing carousels — the page never moves by itself. */
 }
 
