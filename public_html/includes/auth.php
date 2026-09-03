@@ -22,6 +22,55 @@ final class Auth
         return self::$sessionError;
     }
 
+    /**
+     * Make sure PHP has somewhere writable to store sessions.
+     *
+     * Several shared hosts (HostGator/cPanel in particular) ship a
+     * session.save_path such as /var/cpanel/php/sessions/ea-php83 that the
+     * account cannot write to. PHP then fails to start a session at all, which
+     * surfaces as a baffling "session expired" on every form submit.
+     *
+     * Rather than require a php.ini change, fall back to a private directory
+     * inside the application (storage/sessions, above the web root when the
+     * standard layout is used).
+     */
+    private static function ensureWritableSavePath(): void
+    {
+        $configured = (string) config('security.session_path', '');
+        if ($configured === '') {
+            $current = (string) session_save_path();
+            // Nothing to do when the host's own path already works.
+            if ($current !== '' && is_dir($current) && is_writable($current)) {
+                return;
+            }
+        }
+
+        $dir = $configured !== '' ? $configured : JL_ROOT . '/../storage/sessions';
+
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0700, true);
+        }
+        if (!is_dir($dir) || !is_writable($dir)) {
+            // Last resort: the system temp directory. Not ideal on shared
+            // hosting (other accounts may share it) but better than no session.
+            $tmp = sys_get_temp_dir() . '/jollof-sessions';
+            if (!is_dir($tmp)) {
+                @mkdir($tmp, 0700, true);
+            }
+            $dir = is_dir($tmp) && is_writable($tmp) ? $tmp : '';
+        }
+
+        if ($dir !== '') {
+            session_save_path($dir);
+            ini_set('session.save_path', $dir);
+            // Keep the directory listing private if .htaccess is honoured.
+            $guard = $dir . '/.htaccess';
+            if (!is_file($guard)) {
+                @file_put_contents($guard, "Require all denied\n");
+            }
+        }
+    }
+
     public static function startSession(): void
     {
         if (session_status() === PHP_SESSION_ACTIVE) {
@@ -33,6 +82,7 @@ final class Auth
             || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
 
         session_name($name);
+        self::ensureWritableSavePath();
         session_set_cookie_params([
             'lifetime' => $life,
             // Always the SITE root (base_path strips /api, /admin, /install), so
@@ -50,7 +100,7 @@ final class Auth
         if (!@session_start()) {
             self::$sessionError = 'PHP could not start a session. The session save path ('
                 . (session_save_path() ?: 'system default')
-                . ') is probably not writable.';
+                . ') is not writable, and the fallback directory could not be created either.';
             return;
         }
 

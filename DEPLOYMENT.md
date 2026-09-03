@@ -297,5 +297,17 @@ The HTTPS and canonical-domain redirects in `.htaccess` are commented out by
 default for exactly this reason. Enable them only once the real domain resolves
 here and SSL is active — never while testing on a temporary HostGator URL.
 
-**Sessions drop on every request**
-Make sure `/tmp` is writable, or set a session path in cPanel → MultiPHP INI Editor.
+**"PHP could not start a session" / sessions drop on every request**
+Some cPanel accounts ship a `session.save_path` such as
+`/var/cpanel/php/sessions/ea-php83` that your account cannot write to. The app
+detects this and falls back to creating `storage/sessions` itself, so it should
+resolve on its own. If it still complains, the parent directory is not writable
+either — create the folder by hand in File Manager (one level above
+`public_html`, chmod 700), or set an absolute path you own:
+
+```php
+'session_path' => '/home/YOUR_CPANEL_USER/sessions',
+```
+
+in the `security` block of `includes/config.php`. You can also set
+`session.save_path` in cPanel → MultiPHP INI Editor.

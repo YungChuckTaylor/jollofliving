@@ -96,6 +96,11 @@ return [
         // Change this to any long random string. It signs sessions/tokens.
         'app_key'            => 'CHANGE_ME_TO_A_LONG_RANDOM_STRING',
         'session_name'       => 'jollof_session',
+        // Where PHP stores session files. Leave empty to auto-detect: the app
+        // uses the host's own path when it works, otherwise it creates
+        // storage/sessions itself. Set an absolute path only to override, e.g.
+        //   '/home/USER/sessions'
+        'session_path'       => '',
         'session_lifetime'   => 60 * 60 * 12,   // 12 hours
         'admin_2fa_required' => false,          // set true to require the code below
         'admin_otp'          => '',             // shared 6-digit code when 2FA is on
