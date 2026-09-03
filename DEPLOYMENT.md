@@ -5,6 +5,36 @@ The site is a PHP 8 + MySQL application. Everything the browser touches lives in
 
 ---
 
+## 0. Getting the files
+
+Three ways to get a copy on your own machine:
+
+**A. Clone from GitHub** (recommended — always current)
+
+```bash
+git clone https://github.com/YungChuckTaylor/jollofliving.git
+cd jollofliving
+git checkout arena/01a067b3-jollofliving
+```
+
+**B. Download a ZIP from GitHub** — open the repository, switch to the
+`arena/01a067b3-jollofliving` branch, then **Code → Download ZIP**.
+
+**C. Use the prebuilt upload bundle** — `jollofliving-hostgator.zip` in the repo
+root contains exactly what goes on the server (`public_html/`, `database/`, and
+the two docs), with local secrets and installer state stripped out. Regenerate it
+any time after changing the design sources:
+
+```bash
+./tools/pack.sh          # rebuilds assets + pages, writes jollofliving-hostgator.zip
+```
+
+The ZIP is intentionally **not** committed to Git — build it when you need it.
+cPanel's File Manager can upload the archive and extract it in place, which is
+far faster than uploading ~117 files over FTP.
+
+---
+
 ## 1. What to upload
 
 Upload the **contents of `public_html/`** into your cPanel `public_html` folder

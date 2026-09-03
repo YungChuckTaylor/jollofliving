@@ -94,9 +94,15 @@ set `ai.api_key` in the config to route through a hosted model instead).
 node tools/build_php.mjs     # src_php/*.js  -> public_html/assets/js/site.js
 node tools/gen_pages.mjs     # regenerate the thin page controllers
 node tools/gen_seed.mjs      # regenerate database/seed.sql
+./tools/pack.sh              # build jollofliving-hostgator.zip for cPanel upload
 python3 test.py              # Playwright E2E (needs: pip install playwright)
 ```
 
 ## Deployment
 
 See **[DEPLOYMENT.md](DEPLOYMENT.md)** for the full HostGator/cPanel walkthrough.
+
+To get a copy locally, clone the repo (or download it as a ZIP from GitHub).
+`./tools/pack.sh` produces `jollofliving-hostgator.zip` — exactly the files that
+belong on the server, with `includes/config.php` and installer state excluded.
+That archive is gitignored; rebuild it whenever the sources change.

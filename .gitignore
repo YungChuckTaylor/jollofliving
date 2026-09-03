@@ -19,3 +19,6 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# --- release bundle (regenerate with tools/pack.sh) -----------------------
+jollofliving-hostgator.zip
