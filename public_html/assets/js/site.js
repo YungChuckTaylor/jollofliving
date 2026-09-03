@@ -415,11 +415,25 @@ function priceMath(p, n, opts={}) {
   const discRate=monthly?RATES.monthlyDisc:weekly?RATES.weeklyDisc:0;
   const nightly=p.price*(1-discRate);
   const subtotal=nightly*n;
-  let addons=0; (opts.addons||[]).forEach(a=>{ addons += a.k==="insurance"? subtotal*RATES.insurance : ADDONS[a].price; });
-  const svc=Math.round(subtotal*RATES.service);
-  const vat=Math.round((subtotal+svc)*RATES.vat);
+  /* callers pass [{k:"transfer"},…]; a bare key is tolerated too. Percentage
+     add-ons (insurance, carbon) charge a share of the subtotal, flat ones a
+     fixed fee. An unknown key must never take the page down. */
+  let addons=0;
+  (opts.addons||[]).forEach(a=>{
+    const key = (a && typeof a==="object") ? a.k : a;
+    const def = ADDONS[key];
+    if(!def) return;
+    addons += def.price>=1 ? def.price : subtotal*def.price;
+  });
+  /* Mirror Pricing::quote() on the server exactly: the service fee is charged
+     on subtotal + add-ons, and VAT on subtotal + add-ons + cleaning + service.
+     This is only an estimate for display -- the server recalculates and its
+     figure is the one charged -- but the two must agree or the review step
+     shows a different number from the invoice. */
+  const svc=Math.round((subtotal+addons)*RATES.service);
+  const vat=Math.round((subtotal+addons+RATES.cleaning+svc)*RATES.vat);
   const deposit=Math.round(subtotal*RATES.deposit);
-  let total=subtotal+svc+vat+RATES.cleaning+addons;
+  let total=subtotal+addons+RATES.cleaning+svc+vat;
   if(opts.promo){ const pr=PROMOS[opts.promo]; if(pr) total-= pr.off? Math.round(total*pr.off) : (pr.flat||0); }
   if(opts.gift) total-=Math.min(opts.gift, total>0?Math.max(0,total):0);
   return { monthly, weekly, discRate, nightly, subtotal, addons, svc, vat, deposit, total: Math.max(0,Math.round(total)), split: monthly||weekly };
