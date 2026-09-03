@@ -10,17 +10,31 @@ AddDefaultCharset UTF-8
 # --------------------------------------------------------------- rewriting
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    # If the site lives in a sub-folder, change this to /subfolder/
-    RewriteBase /
 
-    # Force HTTPS (comment out until your SSL certificate is issued)
-    RewriteCond %{HTTPS} !=on
-    RewriteCond %{HTTP:X-Forwarded-Proto} !https
-    RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
+    # No RewriteBase on purpose: every rule below uses a RELATIVE target, so
+    # this file works unchanged whether the site is at the domain root or in a
+    # sub-folder such as /jollofliving/. Only set RewriteBase if you know you
+    # need it.
 
-    # Canonical host: send the bare domain to www (swap the rule to prefer bare)
-    RewriteCond %{HTTP_HOST} ^jollofliving\.com$ [NC]
-    RewriteRule ^(.*)$ https://www.jollofliving.com/$1 [R=301,L]
+    # ---- Canonical domain -------------------------------------------------
+    # BOTH redirects below are OFF by default so the site works on a temporary
+    # HostGator URL (kxq.lop.temporary.site) and in sub-folders. Turn them on
+    # only after the real domain is pointed here AND the SSL certificate is
+    # issued -- enabling them too early causes redirect loops or 404s.
+    #
+    # Force HTTPS:
+    #   RewriteCond %{HTTPS} !=on
+    #   RewriteCond %{HTTP:X-Forwarded-Proto} !https
+    #   RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+    #
+    # Send the bare domain to www:
+    #   RewriteCond %{HTTP_HOST} ^jollofliving\.com$ [NC]
+    #   RewriteRule ^(.*)$ https://www.jollofliving.com%{REQUEST_URI} [R=301,L]
+
+    # Let real files and directories through untouched (installer, assets)
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
 
     # ------------------------------------------------------- pretty URLs
     # /stay/onyx            -> stay.php?p=onyx
@@ -53,8 +67,13 @@ AddDefaultCharset UTF-8
 </IfModule>
 
 # ------------------------------------------------------------ error pages
-ErrorDocument 404 /404.php
-ErrorDocument 403 /404.php
+# These take a path from the DOMAIN root, so they only work when the site is at
+# the domain root. In a sub-folder, prefix the path, e.g.:
+#   ErrorDocument 404 /jollofliving/404.php
+# The rewrite fallback above already serves 404.php for unknown URLs, so this is
+# only a safety net and is left off by default.
+# ErrorDocument 404 /404.php
+# ErrorDocument 403 /404.php
 
 # --------------------------------------------------------------- security
 # Never serve the config, the database dumps or version-control metadata.

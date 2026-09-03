@@ -37,6 +37,43 @@ far faster than uploading ~117 files over FTP.
 
 ## 1. What to upload
 
+> ### ⚠️ The single most common mistake
+> Upload the **contents** of `public_html/` — **not the `public_html` folder itself**.
+>
+> ```
+> WRONG                                RIGHT
+> public_html/public_html/index.php    public_html/index.php
+> public_html/public_html/assets/      public_html/assets/
+> ```
+>
+> If you extracted `jollofliving-hostgator.zip` directly into your web root you
+> will have a nested `public_html/public_html/`, and every URL returns 404.
+> Fix it by moving everything up one level (File Manager → select all inside the
+> inner folder → Move → set the path to the outer one), then delete the empty
+> inner folder.
+
+### Installing into a sub-folder (e.g. `example.com/jollofliving/`)
+
+Everything works in a sub-folder with **no code changes** — the app detects its
+own base path. Put the files so that the layout is:
+
+```
+public_html/                 <- your cPanel web root
+└── jollofliving/            <- the site lives here
+    ├── index.php  stays.php  …
+    ├── .htaccess
+    ├── api/  includes/  install/  assets/
+    └── database/           <- schema.sql + seed.sql (see note below)
+```
+
+Then open `http://your-domain/jollofliving/install/` (note the trailing slash).
+
+The installer looks for the SQL files at `../database/` relative to the site
+folder. In the layout above that resolves to `public_html/database/` — if you
+would rather keep them inside, upload them to `jollofliving/database/` and edit
+the two `$root . '/../database/…'` paths near the top of `install/index.php`.
+
+
 Upload the **contents of `public_html/`** into your cPanel `public_html` folder
 (or into `public_html/subfolder` if the site is not on the main domain).
 
@@ -234,13 +271,31 @@ been added to the database with ALL PRIVILEGES.
 Set `'debug' => true` temporarily, reload, and read the message. Check
 cPanel → Errors as well. Set it back to `false` afterwards.
 
+**EVERYTHING 404s, including `/install/`**
+Apache is finding no files at that path. In order of likelihood:
+1. The files are not there at all, or landed in the wrong folder. In cPanel File
+   Manager, browse to the exact folder behind the URL and confirm you can see
+   `index.php` and `install/index.php`.
+2. You have a nested `public_html/public_html/` — see the warning in section 1.
+3. You uploaded the ZIP but never extracted it (File Manager → right-click → Extract).
+4. Quick proof it is a file-placement problem, not a code problem: request a
+   static file such as `/your-folder/assets/css/site.css`. If that 404s too,
+   PHP and MySQL are not involved — the files simply are not where you think.
+
 **Pretty URLs 404 but `.php` URLs work**
-`mod_rewrite` is off, or the site is in a sub-folder — set `RewriteBase` in
-`.htaccess` and `site.base_url` in the config to match.
+`mod_rewrite` is off, or `AllowOverride` forbids `.htaccess`. The shipped
+`.htaccess` needs no `RewriteBase` and works in sub-folders as-is; only set one
+if you have a non-standard setup.
 
 **Styles or images missing**
 `assets/` did not upload, or `base_url` is wrong. Every asset URL is printed
-relative to `base_url`.
+relative to `base_url`, which auto-detects — leave `site.base_url` empty unless
+the detection is actually wrong.
+
+**Redirect loop, or the site jumps to www.jollofliving.com**
+The HTTPS and canonical-domain redirects in `.htaccess` are commented out by
+default for exactly this reason. Enable them only once the real domain resolves
+here and SSL is active — never while testing on a temporary HostGator URL.
 
 **Sessions drop on every request**
 Make sure `/tmp` is writable, or set a session path in cPanel → MultiPHP INI Editor.
