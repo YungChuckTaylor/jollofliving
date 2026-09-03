@@ -25,7 +25,22 @@ $notes  = [];
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && !$done) {
     if (!csrf_check()) {
-        $errors[] = 'Your session expired — please try again.';
+        // Work out WHY, so the user is not left guessing.
+        if (Auth::sessionError()) {
+            $errors[] = Auth::sessionError()
+                . ' Ask your host to make it writable, or set a writable session.save_path'
+                . ' in cPanel → MultiPHP INI Editor.';
+        } elseif (empty($_COOKIE[(string) config('security.session_name', 'jollof_session')])) {
+            $errors[] = 'Your browser did not send the session cookie back. '
+                . 'Check that cookies are enabled, then load this page again at '
+                . e(rtrim(base_path(), '/')) . '/install/ (with the trailing slash) and resubmit.';
+        } elseif (empty($_SESSION['csrf'])) {
+            $errors[] = 'The session was empty on submit — the server may have cleared it. '
+                . 'Reload this page and submit again straight away.';
+        } else {
+            $errors[] = 'Security token mismatch — this usually means the form was opened '
+                . 'in another tab or reloaded from cache. Reload the page and submit again.';
+        }
     } else {
         $adminName  = trim((string) ($_POST['admin_name'] ?? ''));
         $adminEmail = strtolower(trim((string) ($_POST['admin_email'] ?? '')));
@@ -246,7 +261,12 @@ $cfg = config('db');
 $body .= '<div class="note">Target database: <code>' . e((string) ($cfg['driver'] ?? '')) . '</code> · <code>'
     . e((string) ($cfg['name'] ?? $cfg['sqlite_path'] ?? '')) . '</code></div>';
 
-$body .= '<form method="post">' . csrf_field()
+// Post back to this exact script. Without it, requesting /install (no trailing
+// slash) makes the browser resolve a relative action one level up, sending the
+// form to the wrong URL -- where the session cookie may not apply.
+$selfUrl = e((string) ($_SERVER['SCRIPT_NAME'] ?? 'index.php'));
+
+$body .= '<form method="post" action="' . $selfUrl . '">' . csrf_field()
     . '<label for="admin_name">Administrator name</label><input id="admin_name" type="text" name="admin_name" value="' . e((string) ($_POST['admin_name'] ?? '')) . '" required>'
     . '<label for="admin_email">Administrator email</label><input id="admin_email" type="email" name="admin_email" value="' . e((string) ($_POST['admin_email'] ?? '')) . '" required>'
     . '<label for="admin_pass">Administrator password</label><input id="admin_pass" type="password" name="admin_pass" minlength="10" required>'

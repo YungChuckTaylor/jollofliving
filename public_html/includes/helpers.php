@@ -40,8 +40,10 @@ function base_path(): string
     }
     $script = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
     $script = rtrim($script, '/');
-    // strip a trailing /admin or /api segment so links resolve from sub-folders
-    foreach (['/admin', '/api'] as $sub) {
+    // Strip a trailing /admin, /api or /install segment so links -- and, more
+    // importantly, the session cookie path -- resolve to the SITE root rather
+    // than the sub-directory the current script happens to live in.
+    foreach (['/admin', '/api', '/install'] as $sub) {
         if (substr($script, -strlen($sub)) === $sub) {
             $script = substr($script, 0, -strlen($sub));
         }

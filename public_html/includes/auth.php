@@ -14,6 +14,14 @@ if (!defined('JL_ROOT')) {
 
 final class Auth
 {
+    /** Set when session_start() fails, so callers can report the real reason. */
+    private static ?string $sessionError = null;
+
+    public static function sessionError(): ?string
+    {
+        return self::$sessionError;
+    }
+
     public static function startSession(): void
     {
         if (session_status() === PHP_SESSION_ACTIVE) {
@@ -27,12 +35,24 @@ final class Auth
         session_name($name);
         session_set_cookie_params([
             'lifetime' => $life,
+            // Always the SITE root (base_path strips /api, /admin, /install), so
+            // one session is shared by every page instead of being scoped to a
+            // sub-directory -- which silently breaks CSRF between form and POST.
             'path'     => base_path() ?: '/',
             'secure'   => $secure,
             'httponly' => true,
             'samesite' => 'Lax',
         ]);
-        @session_start();
+
+        // If the session cannot start (unwritable save_path is the usual cause on
+        // shared hosting) every CSRF check fails with a confusing "session
+        // expired". Surface that instead of hiding it behind @.
+        if (!@session_start()) {
+            self::$sessionError = 'PHP could not start a session. The session save path ('
+                . (session_save_path() ?: 'system default')
+                . ') is probably not writable.';
+            return;
+        }
 
         if (!isset($_SESSION['created'])) {
             $_SESSION['created'] = time();
