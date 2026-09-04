@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Company Structure — The 20-Person Team | Jollof Living</title>
+<meta name="description" content="How Jollof Living is built: a deliberately lean, 20-person team across seven teams in Lagos & Abuja. Org chart, roles, reporting lines and the numbers each team owns.">
+<meta property="og:title" content="Company Structure — The 20-Person Team | Jollof Living">
+<meta property="og:description" content="A deliberately lean, 20-person team across seven teams in Lagos & Abuja. Org chart, roles, reporting lines and the numbers each team owns.">
+<meta property="og:type" content="website">
+<link rel="icon" type="image/png" href="assets/img/favicon.png">
+<link rel="stylesheet" href="assets/fonts/fonts.css">
+<script>
+/* set theme before first paint (same behaviour as main site) */
+(function(){try{var t=localStorage.getItem("jl:org-theme");
+if(!t)t=window.matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";
+document.documentElement.setAttribute("data-theme",t);}catch(e){}})();
+</script>
+<style>
+/* ============================================================
+   JOLLOF LIVING — Company Structure
+   ivory / deep forest / gold · Cormorant Garamond + Jost
+   ============================================================ */
+:root{
+  --gold-1:#c9a227; --gold-2:#a97e2f; --gold-3:#8a6a1f;
+  --gold-grad:linear-gradient(120deg,#e3c56b 0%,#c9a227 38%,#a97e2f 72%,#d9b95c 100%);
+  --gold-soft:rgba(185,140,50,.14);
+  --fs-serif:'Cormorant Garamond',Georgia,'Times New Roman',serif;
+  --fs-sans:'Jost','Segoe UI',system-ui,sans-serif;
+  --r-s:10px; --r-m:16px; --r-l:24px;
+  --maxw:1320px; --header-h:74px;
+  --ease:cubic-bezier(.22,.61,.36,1);
+}
+:root,[data-theme="light"]{
+  --bg:#f6f2e9; --bg-2:#fdfbf5; --bg-3:#efe9db;
+  --ink:#191612; --ink-soft:#635d4f; --ink-faint:#8d8574;
+  --line:#e2dac7; --line-soft:#ece5d4; --tree-line:#cfc4a8;
+  --card:#ffffff; --card-2:#faf7ef;
+  --green:#0f2e24; --green-2:#1b4a38; --green-ink:#e8efe6; --green-soft:rgba(15,46,36,.08);
+  --accent:#a97e2f; --accent-ink:#6d4d12;
+  --chip:#f1ead9;
+  --shadow-sm:0 2px 10px rgba(30,24,10,.07);
+  --shadow-md:0 12px 34px rgba(30,24,10,.12);
+  --shadow-lg:0 30px 70px rgba(30,24,10,.22);
+  --hero-tint:linear-gradient(180deg,rgba(8,12,9,.60) 0%,rgba(8,12,9,.30) 45%,rgba(8,12,9,.66) 100%);
+  --glass:rgba(253,251,245,.86); --glass-line:rgba(255,255,255,.65);
+}
+[data-theme="dark"]{
+  --bg:#0a100d; --bg-2:#0f1713; --bg-3:#141d18;
+  --ink:#f2ecdd; --ink-soft:#a8b0a2; --ink-faint:#6f7a6e;
+  --line:#26322b; --line-soft:#1d2721; --tree-line:#3a4a40;
+  --card:#121a16; --card-2:#16201b;
+  --green:#12372a; --green-2:#1d4a37; --green-ink:#eaf2e8; --green-soft:rgba(18,55,42,.35);
+  --accent:#d4af5e; --accent-ink:#d4af5e;
+  --chip:#1c2620;
+  --shadow-sm:0 2px 12px rgba(0,0,0,.45);
+  --shadow-md:0 14px 40px rgba(0,0,0,.55);
+  --shadow-lg:0 34px 80px rgba(0,0,0,.65);
+  --hero-tint:linear-gradient(180deg,rgba(4,7,5,.62) 0%,rgba(4,7,5,.32) 45%,rgba(4,7,5,.74) 100%);
+  --glass:rgba(15,23,19,.82); --glass-line:rgba(255,255,255,.07);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:calc(var(--header-h) + 14px)}
+body{
+  font-family:var(--fs-sans);background:var(--bg);color:var(--ink);
+  font-weight:300;line-height:1.6;letter-spacing:.01em;font-size:15.5px;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden;
+  transition:background .45s var(--ease),color .45s var(--ease);
+}
+img{display:block;max-width:100%}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input{font-family:inherit;font-size:inherit;color:inherit}
+::selection{background:rgba(201,162,39,.32)}
+h1,h2,h3,h4{font-family:var(--fs-serif);font-weight:600;line-height:1.12}
+em.si{font-family:var(--fs-serif);font-style:italic;font-weight:500}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 28px}
+@media(max-width:760px){.wrap{padding:0 18px}}
+.eyebrow{display:inline-flex;align-items:center;gap:12px;font-size:12px;font-weight:500;letter-spacing:.34em;text-transform:uppercase;color:var(--accent)}
+.eyebrow::before,.eyebrow.center::after{content:"";height:1px;width:38px;background:linear-gradient(90deg,transparent,var(--accent))}
+.eyebrow.center::after{background:linear-gradient(90deg,var(--accent),transparent)}
+.sec-head{margin-bottom:42px}
+.sec-head h2{font-size:clamp(1.9rem,4vw,2.9rem);margin:14px 0 10px}
+.sec-head p{color:var(--ink-soft);max-width:700px;font-size:16px}
+.sec-pad{padding:84px 0}
+@media(max-width:760px){.sec-pad{padding:56px 0}}
+.alt-bg{background:var(--bg-2)}
+.gold-text{background:var(--gold-grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.small{font-size:13px;color:var(--ink-faint)}
+.muted{color:var(--ink-soft)}
+.reveal{opacity:0;transform:translateY(26px);transition:opacity .8s var(--ease),transform .8s var(--ease)}
+.reveal.in{opacity:1;transform:none}
+
+/* ---------- buttons / chips / badges ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;font-weight:500;font-size:14px;letter-spacing:.06em;text-transform:uppercase;padding:13px 24px;border-radius:999px;transition:.3s var(--ease);white-space:nowrap;border:1px solid transparent}
+.btn-gold{background:var(--gold-grad);color:#231a05;box-shadow:0 8px 22px rgba(169,126,47,.35)}
+.btn-gold:hover{filter:brightness(1.07);transform:translateY(-2px)}
+.btn-ghost{border-color:var(--line);color:var(--ink);background:transparent}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+.btn-sm{padding:9px 16px;font-size:12.5px}
+.link-arrow{display:inline-flex;align-items:center;gap:8px;font-weight:400;letter-spacing:.08em;text-transform:uppercase;font-size:13px;color:var(--accent)}
+.link-arrow:hover{gap:12px}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;background:var(--gold-soft);color:var(--accent);padding:4px 11px;border-radius:999px;font-weight:500;width:fit-content}
+.badge.ok{background:var(--green-soft);color:var(--accent-ink)}
+[data-theme="dark"] .badge.ok{color:#5fbf8a}
+.avatar{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-family:var(--fs-serif);font-weight:600;font-size:15px;color:#231a05;background:var(--gold-grad);flex-shrink:0}
+.avatar.green{background:var(--green);color:var(--green-ink)}
+.avatar.ivory{background:var(--bg-3);color:var(--ink-soft);border:1px solid var(--line)}
+.avatar.lg{width:64px;height:64px;font-size:23px}
+.ico{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+
+/* ---------- header ---------- */
+#header{position:fixed;top:0;left:0;right:0;z-index:200;background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid transparent;transition:.35s var(--ease)}
+#header.scrolled{border-bottom-color:var(--line);box-shadow:var(--shadow-sm)}
+.nav{height:var(--header-h);display:flex;align-items:center;gap:26px}
+.brand img{height:44px;width:auto}
+.nav-links{display:flex;gap:24px;margin-left:14px}
+.nav-links a{font-size:13.5px;letter-spacing:.06em;color:var(--ink-soft);transition:.25s;position:relative;padding:6px 0}
+.nav-links a:hover,.nav-links a.active{color:var(--accent)}
+.nav-links a.active::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--gold-grad);border-radius:2px}
+.nav-actions{margin-left:auto;display:flex;align-items:center;gap:12px}
+.icon-btn{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--line);color:var(--ink-soft);transition:.25s}
+.icon-btn:hover{color:var(--accent);border-color:var(--accent)}
+.icon-btn .ic-moon{display:none}
+[data-theme="dark"] .icon-btn .ic-sun{display:none}
+[data-theme="dark"] .icon-btn .ic-moon{display:block}
+@media(max-width:940px){.nav-links{display:none}}
+@media(max-width:560px){.nav .btn-cta{display:none}}
+
+/* ---------- hero ---------- */
+.hero{position:relative;min-height:72vh;display:flex;align-items:center;justify-content:center;text-align:center;background:var(--green);isolation:isolate;overflow:hidden}
+.hero .bg{position:absolute;inset:0;background:url('assets/img/hero.jpg') center/cover no-repeat;z-index:-2;animation:heroZoom 18s var(--ease) both}
+@keyframes heroZoom{from{transform:scale(1.08)}to{transform:scale(1)}}
+.hero::after{content:"";position:absolute;inset:0;background:var(--hero-tint);z-index:-1}
+.hero-inner{padding:150px 24px 84px;max-width:900px}
+.hero .eyebrow{color:#e6cf8f;justify-content:center}
+.hero .eyebrow::before{background:linear-gradient(90deg,transparent,#e6cf8f)}
+.hero h1{color:#fdfbf5;font-size:clamp(2.7rem,6.4vw,4.7rem);margin:20px 0 18px}
+.hero h1 em{font-style:italic;font-weight:500;background:var(--gold-grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{color:rgba(253,251,245,.86);font-size:17px;max-width:60ch;margin:0 auto 30px}
+.hero-ctas{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+
+/* ---------- stats band ---------- */
+.stats{border-block:1px solid var(--line-soft);background:var(--bg-2)}
+.stats .grid{display:grid;grid-template-columns:repeat(4,1fr)}
+.stat{padding:40px 18px;text-align:center;border-right:1px solid var(--line-soft)}
+.stat:last-child{border-right:none}
+.stat .num{font-family:var(--fs-serif);font-size:clamp(2rem,3.6vw,2.9rem);font-weight:600}
+.stat .lbl{font-size:11.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-faint);margin-top:6px}
+@media(max-width:820px){.stats .grid{grid-template-columns:repeat(2,1fr)}.stat:nth-child(2){border-right:none}.stat:nth-child(-n+2){border-bottom:1px solid var(--line-soft)}}
+
+/* ---------- principles ---------- */
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+@media(max-width:1020px){.grid-4{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:640px){.grid-4{grid-template-columns:1fr}}
+.panel{background:var(--card);border:1px solid var(--line-soft);border-radius:var(--r-m);padding:26px;box-shadow:var(--shadow-sm);transition:.3s var(--ease)}
+.panel:hover{box-shadow:var(--shadow-md);transform:translateY(-3px)}
+.why-ico{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:var(--gold-soft);color:var(--accent);margin-bottom:16px}
+.panel h3{font-size:20px;margin-bottom:8px}
+.panel p{font-size:14px;color:var(--ink-soft)}
+
+/* ---------- org chart ---------- */
+.chart-wrap{overflow-x:auto;padding:8px 4px 18px;-webkit-overflow-scrolling:touch}
+.tree{display:inline-block;min-width:1290px;padding:0 26px;margin:0 auto}
+.board-block{display:flex;flex-direction:column;align-items:center}
+.board-card{border:1px dashed var(--accent);color:var(--accent);background:transparent;border-radius:var(--r-s);padding:10px 22px;font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;text-align:center}
+.board-drop{width:1px;height:26px;border-left:1px dashed var(--tree-line)}
+.tree ul{display:flex;justify-content:center;list-style:none;margin:0;padding:30px 0 0;position:relative}
+.tree ul ul::before{content:"";position:absolute;top:0;left:50%;border-left:1px solid var(--tree-line);width:0;height:30px}
+.tree li{position:relative;display:flex;flex-direction:column;align-items:center;padding:30px 6px 0}
+.tree li::before,.tree li::after{content:"";position:absolute;top:0;right:50%;border-top:1px solid var(--tree-line);width:50%;height:30px}
+.tree li::after{right:auto;left:50%;border-left:1px solid var(--tree-line)}
+.tree li:only-child::before,.tree li:only-child::after{display:none}
+.tree li:only-child{padding-top:0}
+.tree li:first-child::before,.tree li:last-child::after{border:none}
+.tree li:last-child::before{border-right:1px solid var(--tree-line);border-radius:0 6px 0 0}
+.tree li:first-child::after{border-radius:6px 0 0 0}
+
+.node{background:var(--card);border:1px solid var(--line);border-radius:var(--r-m);box-shadow:var(--shadow-sm);width:176px;padding:16px 13px 13px;text-align:center;transition:.3s var(--ease)}
+.node:hover{transform:translateY(-3px);box-shadow:var(--shadow-md);border-color:var(--accent)}
+.node .dico{width:40px;height:40px;margin:0 auto 10px;border-radius:12px;display:grid;place-items:center;background:var(--gold-soft);color:var(--accent)}
+.node .dico .ico{width:20px;height:20px}
+.node h4{font-size:15.5px;line-height:1.25;margin-bottom:3px}
+.node .dsub{font-size:11px;letter-spacing:.06em;color:var(--ink-faint);text-transform:uppercase}
+.node .count{margin:10px auto 0}
+.dept-head-btn{display:block;width:100%}
+.dept-head-btn:hover h4{color:var(--accent)}
+.people-list{margin-top:12px;border-top:1px solid var(--line-soft);padding-top:11px;display:grid;gap:8px}
+.p-row{display:flex;align-items:center;gap:9px;text-align:left;width:100%;padding:5px 6px;border-radius:10px;transition:.2s}
+.p-row:hover{background:var(--gold-soft)}
+.p-row .avatar{width:30px;height:30px;font-size:11px;border-radius:50%}
+.p-row b{display:block;font-size:12.5px;font-weight:500;line-height:1.25}
+.p-row span{display:block;font-size:10.5px;color:var(--ink-faint);line-height:1.3;letter-spacing:.02em}
+.p-row .lead-tag{margin-left:auto;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);border:1px solid var(--accent);padding:2px 6px;border-radius:999px;flex-shrink:0}
+.node.ceo-node{width:320px;background:var(--green);border-color:var(--green-2);color:var(--green-ink);padding:24px 26px 20px}
+.node.ceo-node:hover{border-color:var(--gold-1)}
+.node.ceo-node .avatar{width:62px;height:62px;font-size:22px;margin:0 auto 12px}
+.node.ceo-node h3{font-size:25px;color:#fdfbf5}
+.node.ceo-node .role{color:#e6cf8f;font-size:12.5px;letter-spacing:.18em;text-transform:uppercase;margin-top:4px}
+.node.ceo-node .cnote{font-size:12px;color:rgba(232,239,230,.75);margin-top:10px}
+.legend{display:flex;gap:22px;flex-wrap:wrap;justify-content:center;margin-top:26px;font-size:12.5px;color:var(--ink-soft)}
+.legend span{display:inline-flex;align-items:center;gap:8px}
+.dot{width:11px;height:11px;border-radius:50%;display:inline-block}
+.dot.g{background:var(--gold-grad)}
+.dot.f{background:var(--green)}
+.dot.t{background:var(--bg-3);border:1px solid var(--line)}
+.swipe-hint{display:none;margin-top:14px;font-size:12.5px;color:var(--ink-faint);letter-spacing:.1em;text-transform:uppercase;justify-content:center;gap:10px;align-items:center}
+@media(max-width:1339px){.swipe-hint{display:flex}}
+.footnote{max-width:760px;margin:26px auto 0;text-align:center}
+
+/* ---------- departments ---------- */
+.dept-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
+@media(max-width:1020px){.dept-grid{grid-template-columns:1fr}}
+.dept-card{background:var(--card);border:1px solid var(--line-soft);border-radius:var(--r-l);padding:30px;box-shadow:var(--shadow-sm);transition:.3s var(--ease);display:flex;flex-direction:column}
+.dept-card:hover{box-shadow:var(--shadow-md);transform:translateY(-3px)}
+.dept-top{display:flex;align-items:center;gap:15px;margin-bottom:14px}
+.dept-top .why-ico{margin-bottom:0;width:50px;height:50px}
+.dept-top h3{font-size:23px}
+.dept-top .dsub{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-faint);margin-top:3px}
+.dept-top .count{margin-left:auto;align-self:flex-start}
+.mission{font-family:var(--fs-serif);font-style:italic;font-size:17.5px;color:var(--accent-ink);margin-bottom:18px;line-height:1.4}
+[data-theme="dark"] .mission{color:#d4af5e}
+.dept-card h5{font-size:11.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-faint);margin:16px 0 9px;font-weight:500}
+.resp{list-style:none;display:grid;gap:7px}
+.resp li{display:flex;gap:10px;font-size:14px;color:var(--ink-soft)}
+.resp li svg{width:15px;height:15px;margin-top:4px;color:var(--accent);flex-shrink:0}
+.kpi-chips{display:flex;flex-wrap:wrap;gap:8px}
+.kpi-chips span{background:var(--chip);border:1px solid var(--line-soft);border-radius:999px;padding:6px 13px;font-size:12.5px;color:var(--ink-soft)}
+.team-chips{display:flex;flex-wrap:wrap;gap:9px}
+.team-chip{display:inline-flex;align-items:center;gap:9px;border:1px solid var(--line);border-radius:999px;padding:6px 14px 6px 7px;font-size:13px;transition:.25s;background:var(--card-2)}
+.team-chip:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-2px)}
+.team-chip .avatar{width:28px;height:28px;font-size:10.5px}
+.team-chip small{color:var(--ink-faint);font-size:11px}
+.rline{margin-top:18px;padding-top:14px;border-top:1px dashed var(--line);font-size:12.5px;color:var(--ink-faint)}
+
+/* ---------- directory ---------- */
+.dir-controls{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-bottom:22px}
+.filter-chips{display:flex;gap:8px;flex-wrap:wrap}
+.fchip{border:1px solid var(--line);border-radius:999px;padding:8px 16px;font-size:13px;color:var(--ink-soft);transition:.25s;background:var(--card)}
+.fchip:hover{border-color:var(--accent);color:var(--accent)}
+.fchip.on{background:var(--gold-grad);color:#231a05;border-color:transparent;font-weight:500}
+.dir-search{margin-left:auto;display:flex;align-items:center;gap:9px;border:1px solid var(--line);border-radius:999px;padding:9px 18px;background:var(--card);min-width:250px}
+.dir-search input{border:none;outline:none;background:transparent;width:100%;font-size:14px}
+.dir-search .ico{width:16px;height:16px;color:var(--ink-faint)}
+@media(max-width:860px){.dir-search{margin-left:0;width:100%}}
+.table-wrap{border:1px solid var(--line-soft);border-radius:var(--r-m);overflow:hidden;background:var(--card);box-shadow:var(--shadow-sm)}
+.table-scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:820px}
+thead th{font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-faint);font-weight:500;text-align:left;padding:14px 18px;border-bottom:1px solid var(--line);background:var(--card-2)}
+tbody td{padding:13px 18px;border-bottom:1px solid var(--line-soft);font-size:14px;vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr{cursor:pointer;transition:.2s}
+tbody tr:hover{background:var(--gold-soft)}
+td .who{display:flex;align-items:center;gap:11px}
+td .who .avatar{width:33px;height:33px;font-size:12px}
+td .who b{font-weight:500;display:block;line-height:1.3}
+td .who small{color:var(--ink-faint);font-size:11.5px}
+.lvl-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:8px;vertical-align:1px}
+.dir-count{font-size:12.5px;color:var(--ink-faint);margin-top:12px;text-align:right}
+
+/* ---------- scale note ---------- */
+.scale-note{background:linear-gradient(150deg,var(--card),var(--gold-soft));border:1px solid var(--line-soft);border-radius:var(--r-l);padding:44px 34px;text-align:center;box-shadow:var(--shadow-sm)}
+.scale-note h3{font-size:clamp(1.5rem,3vw,2.1rem);margin-bottom:10px}
+.scale-note p{max-width:70ch;margin:0 auto 8px;color:var(--ink-soft);font-size:15px}
+.next-seats{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:18px}
+.next-seats span{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:8px 16px;font-size:13px;display:inline-flex;gap:9px;align-items:center}
+.next-seats i{font-style:normal;color:var(--accent);font-family:var(--fs-serif);font-weight:600}
+
+/* ---------- footer ---------- */
+footer{background:var(--green);color:var(--green-ink);margin-top:84px}
+.foot-grid{display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:40px;padding:58px 0 44px}
+@media(max-width:860px){.foot-grid{grid-template-columns:1fr}}
+.foot-grid img{height:46px;margin-bottom:16px}
+.foot-grid p{font-size:14px;color:rgba(232,239,230,.75);max-width:44ch}
+.foot-grid h4{font-size:12px;letter-spacing:.26em;text-transform:uppercase;color:#e6cf8f;margin-bottom:16px;font-weight:500;font-family:var(--fs-sans)}
+.foot-grid ul{list-style:none;display:grid;gap:9px}
+.foot-grid a{font-size:14px;color:rgba(232,239,230,.78);transition:.2s}
+.foot-grid a:hover{color:#e6cf8f}
+.foot-bottom{border-top:1px solid rgba(232,239,230,.16);padding:20px 0;display:flex;gap:14px;flex-wrap:wrap;justify-content:space-between;font-size:12.5px;color:rgba(232,239,230,.6)}
+
+/* ---------- person sheet ---------- */
+.sheet{position:fixed;inset:0;z-index:400;display:none}
+.sheet.open{display:block}
+.sheet .scrim{position:absolute;inset:0;background:rgba(10,12,9,.5);backdrop-filter:blur(3px);animation:fade .35s var(--ease)}
+@keyframes fade{from{opacity:0}}
+@keyframes slideIn{from{transform:translateX(60px);opacity:0}to{transform:none;opacity:1}}
+.sheet .panel{position:absolute;top:0;right:0;bottom:0;width:min(460px,94vw);background:var(--bg-2);border-left:1px solid var(--line);box-shadow:var(--shadow-lg);padding:28px;overflow-y:auto;animation:slideIn .45s var(--ease)}
+.sheet-x{position:absolute;top:18px;right:18px;z-index:2}
+.sheet-top{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:22px;padding-right:44px}
+.sheet-id{display:flex;gap:17px;align-items:center;margin-bottom:20px}
+.sheet-id h3{font-size:27px;line-height:1.15}
+.sheet-id .role{color:var(--accent);font-size:13px;letter-spacing:.1em;text-transform:uppercase;margin-top:4px}
+.meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r-s);overflow:hidden;margin-bottom:22px}
+.meta-grid div{background:var(--card);padding:13px 15px}
+.meta-grid .k{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:3px}
+.meta-grid .v{font-size:14px;font-weight:400}
+.sheet h5{font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-faint);margin:20px 0 9px;font-weight:500}
+.mandate{font-size:15px;color:var(--ink-soft)}
+.owns-list{list-style:none;display:grid;gap:8px}
+.owns-list li{display:flex;gap:10px;font-size:14px;color:var(--ink-soft)}
+.owns-list svg{width:15px;height:15px;margin-top:4px;color:var(--ok,#2e7d4f);flex-shrink:0}
+[data-theme="dark"] .owns-list svg{color:#5fbf8a}
+.succ-list{list-style:none;display:grid;gap:8px}
+.succ-list li{display:flex;gap:10px;font-size:14px;color:var(--ink-soft)}
+.succ-list li::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--gold-grad);margin-top:7px;flex-shrink:0}
+.dotted-note{margin-top:20px;background:var(--gold-soft);border-radius:var(--r-s);padding:12px 15px;font-size:13px;color:var(--accent-ink)}
+[data-theme="dark"] .dotted-note{color:#d4af5e}
+
+@media(max-width:760px){
+  .node.ceo-node{width:270px}
+  .hero-inner{padding:130px 18px 64px}
+}
+/* ---------- print ---------- */
+@media print{
+  #header .nav-actions,.hero-ctas,.swipe-hint,.dir-controls,.sheet{display:none!important}
+  #header{position:static;background:#fff}
+  .hero{min-height:0;background:var(--green)!important}
+  .hero .bg{display:none}
+  .chart-wrap{overflow:visible}
+  .tree{min-width:0}
+  .table-scroll{overflow:visible}
+  table{min-width:0}
+  body{background:#fff}
+  .dept-grid,.grid-4{gap:10px}
+  .dept-card,.panel,.node{box-shadow:none}
+  section{page-break-inside:avoid}
+}
+</style>
+</head>
+<body>
+
+<!-- ================= HEADER ================= -->
+<header id="header">
+  <div class="wrap nav">
+    <a class="brand" href="index.html" aria-label="Jollof Living — back to main site">
+      <img id="brandImg" src="assets/img/logo-light.png" alt="Jollof Living">
+    </a>
+    <nav class="nav-links" aria-label="Page sections">
+      <a href="#chart" class="active">Org chart</a>
+      <a href="#departments">Teams</a>
+      <a href="#directory">Directory</a>
+    </nav>
+    <div class="nav-actions">
+      <button class="icon-btn" id="themeBtn" aria-label="Toggle theme" title="Toggle light / dark">
+        <svg class="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.5 4.5l1.8 1.8M17.7 17.7l1.8 1.8M4.5 19.5l1.8-1.8M17.7 6.3l1.8-1.8"/></svg>
+        <svg class="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.5 14.5A8.5 8.5 0 1 1 9.5 3.5a7 7 0 0 0 11 11z"/></svg>
+      </button>
+      <a class="btn btn-gold btn-sm btn-cta" href="index.html">Back to jollofliving.com</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- ================= HERO ================= -->
+  <section class="hero">
+    <div class="bg" role="presentation"></div>
+    <div class="hero-inner">
+      <span class="eyebrow">About · Company structure</span>
+      <h1>Small team. <em>Serious</em> standards.</h1>
+      <p>Jollof Living runs on a deliberately lean team of twenty — senior people, short lines to the
+         guest, and a named owner for every number. No layers for layers' sake. This page is exactly
+         how we're built: the org chart, every role, and what each person is accountable for.</p>
+      <div class="hero-ctas">
+        <a class="btn btn-gold btn-lg" href="#chart">Explore the org chart</a>
+        <a class="btn btn-ghost btn-lg" style="color:#fdfbf5;border-color:rgba(253,251,245,.4)" href="#directory">Meet the directory</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= STATS ================= -->
+  <section class="stats" id="stats">
+    <div class="wrap">
+      <div class="grid">
+        <div class="stat"><div class="num" data-count="20">0</div><div class="lbl">People · one pot</div></div>
+        <div class="stat"><div class="num" data-count="7">0</div><div class="lbl">Teams, zero busywork</div></div>
+        <div class="stat"><div class="num" data-count="2">0</div><div class="lbl">Cities on the ground</div></div>
+        <div class="stat"><div class="num" data-count="3">0</div><div class="lbl">Levels, founder to front line</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PRINCIPLES ================= -->
+  <section class="sec-pad">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="eyebrow center">How we're built</span>
+        <h2 style="text-align:center">Four rules that keep <em class="si">twenty people</em> feeling like fifty</h2>
+      </div>
+      <div class="grid-4 stagger reveal">
+        <div class="panel">
+          <div class="why-ico"><svg class="ico" viewBox="0 0 24 24"><path d="M12 3l2.5 5.3 5.5.7-4 4 1 5.5-5-2.7-5 2.7 1-5.5-4-4 5.5-.7z"/></svg></div>
+          <h3>Lean by design</h3>
+          <p>Twenty seats, each a multiplier. Every leader still does the work — the GM inspects homes, the CTO ships code, the CEO answers guest mail on Sundays.</p>
+        </div>
+        <div class="panel">
+          <div class="why-ico"><svg class="ico" viewBox="0 0 24 24"><path d="M21 12a8.5 8.5 0 0 1-8.5 8.5c-1.5 0-2.9-.4-4.1-1L3 21l1.6-5A8.5 8.5 0 1 1 21 12z"/></svg></div>
+          <h3>Short lines to the guest</h3>
+          <p>No one is more than two steps from a guest conversation. Leaders carry a pager, not just a plan — every review and every incident reaches the top within a day.</p>
+        </div>
+        <div class="panel">
+          <div class="why-ico"><svg class="ico" viewBox="0 0 24 24"><path d="M6 3v12M6 15a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0 0v12"/></svg></div>
+          <h3>Owners, not approvers</h3>
+          <p>Each team owns its numbers end-to-end — budget, vendor, outcome. Autonomy with audit: the monthly scorecard is open to everyone, no exceptions.</p>
+        </div>
+        <div class="panel">
+          <div class="why-ico"><svg class="ico" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17.5" cy="9.5" r="2.6"/><path d="M15.5 14.6a5.4 5.4 0 0 1 6 4.4"/></svg></div>
+          <h3>One table</h3>
+          <p>Like jollof rice, everyone contributes to one pot. Monday all-hands, one shared roadmap, one standards book — hierarchy decides, never divides.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= ORG CHART ================= -->
+  <section class="sec-pad alt-bg" id="chart">
+    <div class="wrap">
+      <div class="sec-head center reveal" style="text-align:center">
+        <span class="eyebrow center">The org chart</span>
+        <h2>Who reports to <em class="si">whom</em></h2>
+        <p style="margin:0 auto">Seven teams under the founder's office. Tap any name for the full role brief —
+           mandate, what they own, and the numbers they're judged by.</p>
+      </div>
+      <div class="chart-wrap reveal">
+        <div class="tree" id="orgTree"></div>
+      </div>
+      <p class="swipe-hint"><svg class="ico" style="width:16px;height:16px" viewBox="0 0 24 24"><path d="M4 12h16M14 6l6 6-6 6"/></svg> Swipe to explore the full chart</p>
+      <div class="legend reveal">
+        <span><i class="dot g"></i> Executive</span>
+        <span><i class="dot f"></i> Team lead</span>
+        <span><i class="dot t"></i> Team member</span>
+      </div>
+      <p class="footnote small reveal">† Nnamdi sits within the Office of the CEO and reports directly to the founder.<br>
+        Governance: the CEO is accountable to a three-member non-executive Board; the Data Protection Officer holds an
+        independent reporting line to the Board; the statutory audit is carried out by an external firm.</p>
+    </div>
+  </section>
+
+  <!-- ================= DEPARTMENTS ================= -->
+  <section class="sec-pad" id="departments">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="eyebrow">Teams in detail</span>
+        <h2>Seven teams, <em class="si">every number owned</em></h2>
+        <p>Each team below carries its own mission, a short list of non-negotiables, and the KPIs it answers
+           for at the monthly scorecard. Headcount is a cap, not a target.</p>
+      </div>
+      <div class="dept-grid" id="deptGrid"></div>
+    </div>
+  </section>
+
+  <!-- ================= DIRECTORY ================= -->
+  <section class="sec-pad alt-bg" id="directory">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="eyebrow">Team directory</span>
+        <h2>All twenty, on <em class="si">one page</em></h2>
+        <p>Filter by team or search by name, role or base city. Select any row for the full role brief.</p>
+      </div>
+      <div class="dir-controls reveal">
+        <div class="filter-chips" id="filterChips"></div>
+        <label class="dir-search">
+          <svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <input type="search" id="dirSearch" placeholder="Search name, role or city…" aria-label="Search the directory">
+        </label>
+      </div>
+      <div class="table-wrap reveal">
+        <div class="table-scroll">
+          <table aria-label="Staff directory">
+            <thead>
+              <tr><th>Person</th><th>Role</th><th>Team</th><th>Reports to</th><th>Base</th></tr>
+            </thead>
+            <tbody id="dirBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="dir-count" id="dirCount"></div>
+    </div>
+  </section>
+
+  <!-- ================= SCALE NOTE ================= -->
+  <section class="sec-pad" style="padding-top:0">
+    <div class="wrap">
+      <div class="scale-note reveal">
+        <span class="eyebrow center">Built to scale</span>
+        <h3>Capped at twenty — <em class="si">by design</em></h3>
+        <p>Headcount stays at twenty until the numbers say otherwise. When citywide occupancy holds above
+           75% for two consecutive quarters, the next seats open in this order — no new layers, only leverage:</p>
+        <div class="next-seats">
+          <span><i>1</i> Revenue Accountant (Finance)</span>
+          <span><i>2</i> Supply Analyst (Property &amp; Listings)</span>
+          <span><i>3</i> Third Engineer — mobile (Tech)</span>
+          <span><i>4</i> Partnerships Manager (Growth)</span>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ================= FOOTER ================= -->
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <img id="footLogo" src="assets/img/logo-dark.png" alt="Jollof Living">
+        <p>A premium platform for luxurious high-end apartments — exclusive short and long-term stays,
+           inspired by the vibrant culture and warmth of Nigeria.</p>
+      </div>
+      <div>
+        <h4>This page</h4>
+        <ul>
+          <li><a href="#chart">Org chart</a></li>
+          <li><a href="#departments">Teams in detail</a></li>
+          <li><a href="#directory">Team directory</a></li>
+          <li><a href="#stats">Company at a glance</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Company</h4>
+        <ul>
+          <li><a href="index.html">jollofliving.com</a></li>
+          <li><a href="about.html">About &amp; compliance</a></li>
+          <li><a href="future.html">Roadmap</a></li>
+          <li><a href="business.html">Jollof for Business</a></li>
+          <li><a href="host.html">List your residence</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© <span id="yearNow">2026</span> Jollof Living. All rights reserved. · Luxury Living, African Soul</span>
+      <span>Structure v1.0 · reviewed quarterly by the Chief of Staff</span>
+    </div>
+  </div>
+</footer>
+
+<!-- ================= PERSON SHEET ================= -->
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Role details">
+  <div class="scrim" data-close></div>
+  <aside class="panel">
+    <button class="icon-btn sheet-x" data-close aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <div id="sheetBody"></div>
+  </aside>
+</div>
+
+<script>
+"use strict";
+/* ============================================================
+   DATA — 20 people · 7 teams
+   ============================================================ */
+const AVA = {g:"avatar", f:"avatar green", t:"avatar ivory"};
+const DEPTS = [
+  {id:"office", name:"Office of the CEO", lead:"adaora", sub:"Founder's office · Lagos",
+   icon:'<path d="M4 18h16M5 18l-1.2-8.5 5.2 3.4L12 6l3 6.9 5.2-3.4L19 18"/>',
+   mission:"Keep the vision sharp, the capital safe and the standard unforgiving — everything that is everybody's job is anchored here.",
+   resp:["Strategy, annual plan & board cadence","Company OKRs and the open monthly scorecard","Culture, hiring bar and final people decisions","Brand, standards & the “Jollof Verified” promise"],
+   kpis:["Guest NPS ≥ 70","18-month runway","OKR cycle on time"]},
+  {id:"property", name:"Property & Listings", lead:"aisha", sub:"Supply, hosts & field ops · Lagos + Abuja",
+   icon:'<path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/>',
+   mission:"Every home on Jollof Living is worth the badge on it — this team sources it, verifies it, prices it and keeps the host smiling.",
+   resp:["Supply growth & new-home onboarding","200-point “Jollof Verified” inspections","Listing media, copy & pricing guardrails","Keys, turnovers, transfers & maintenance vendors"],
+   kpis:["100% homes verified","Host retention ≥ 90%","Occupancy ≥ 70%"]},
+  {id:"gx", name:"Guest Experience", lead:"ngozi", sub:"Concierge & support · Lagos + Abuja",
+   icon:'<path d="M4 17h16M6 17a6 6 0 0 1 12 0M12 8V6M9 6h6"/>',
+   mission:"The stay is the product. From first message to farewell jollof, this team owns how Jollof Living feels.",
+   resp:["Guest support & concierge desk, 07:00–23:00","AI concierge quality, escalation & recovery","Transfers, chefs, tours — the extras guests remember","Post-stay reviews, refunds & service recovery"],
+   kpis:["Avg rating ≥ 4.9★","First response < 5 min","Issue fixed within the stay"]},
+  {id:"tech", name:"Technology & Product", lead:"ikenna", sub:"Platform, AI & payments · Lagos + remote",
+   icon:'<path d="M8 7l-5 5 5 5M16 7l5 5-5 5"/>',
+   mission:"A five-star platform on a mid-range phone: fast, trustworthy with money, and quietly intelligent.",
+   resp:["Platform architecture, uptime & releases","“Jollof” AI concierge, search & pricing models","Escrow flow, host payout & admin tooling","Security, performance & accessibility"],
+   kpis:["99.9% uptime","AI resolves ≥ 60% of chats","Booking completion ≥ 85%"]},
+  {id:"growth", name:"Growth & Marketing", lead:"tomiwa", sub:"Demand, brand & community · Lagos",
+   icon:'<path d="M3 17l6-6 4 4 8-8M15 7h6v6"/>',
+   mission:"Fill the calendar without buying the market — owned audience first, paid naira spent like an owner would.",
+   resp:["Performance marketing & SEO","Journal, socials & the Jollof Club community","Corporate pipeline — Jollof for Business","Seasonal campaigns — Detty December & beyond"],
+   kpis:["Direct bookings ≥ 55%","Repeat stays ≥ 35%","CAC payback < 3 months"]},
+  {id:"finance", name:"Finance", lead:"chiamaka", sub:"Books, escrow & payouts · Lagos",
+   icon:'<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M5.5 9.5h.01M18.5 14.5h.01"/>',
+   mission:"Every naira in the right place, on time, with a paper trail — the trust layer guests never see and hosts always feel.",
+   resp:["Monthly management accounts & payroll","Escrow reconciliation across Paystack, Flutterwave & Stripe","Host payouts (T+1) , refunds & chargebacks","VAT / WHT / PAYE filings & external audit support"],
+   kpis:["Books closed by day 5","Payouts 100% on schedule","Filings 100% on time"]},
+  {id:"legal", name:"Legal, Compliance & Trust", lead:"bisi", sub:"NDPR, contracts & safety · Lagos",
+   icon:'<path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9.5 12l2 2 3.5-4"/>',
+   mission:"The company's independent conscience — protecting guests, hosts and the platform with contracts, compliance and fair-play enforcement.",
+   resp:["Contracts for hosts, guests, partners & staff","NDPR / GDPR compliance & Data Protection Officer duties","Trust & safety, anti-discrimination enforcement","Regulatory watch — hospitality, tourism & payments rules"],
+   kpis:["Contract turnaround < 3 days","Zero NDPR breaches","Disputes resolved < 10 days"]},
+];
+const PEOPLE = [
+  {id:"temi", name:"Temilola “Temi” Balogun", initials:"TB", role:"Founder & Chief Executive Officer", dept:"office", level:3, reportsTo:null,
+   base:"Lagos · Ikoyi HQ", since:"2025 · founding team",
+   mandate:"Owns the vision, the bar and the balance sheet. Sets strategy, raises capital, chairs the Monday all-hands — and takes the final call on brand, hosts and hires. Still reads every guest review.",
+   owns:["Strategy, annual plan & capital","Board & investor relationships","The “Jollof bar” — brand & standards","Final hiring decisions & culture"],
+   success:["Guest NPS ≥ 70","Verified homes live in Lagos & Abuja","18-month runway at all times"]},
+  {id:"adaora", name:"Adaora Okafor", initials:"AO", role:"Chief of Staff & Executive Assistant", dept:"office", level:2, reportsTo:"temi",
+   base:"Lagos · Ikoyi HQ", since:"2025 · founding team",
+   mandate:"Runs the CEO's operating rhythm so the company runs without bottlenecks — board packs, OKRs, cross-team follow-through. Has a dotted line into every team and the memory of the whole company.",
+   owns:["Board & investor reporting","Company OKRs & weekly scorecard","All-hands & leadership cadence","CEO priorities, travel & inbox"],
+   success:["Decisions documented within 24h","OKR cycle on time, every quarter","Zero dropped cross-team commitments"]},
+  {id:"nnamdi", name:"Nnamdi Umeh", initials:"NU", role:"People & Culture / Office Administrator", dept:"office", level:1, reportsTo:"temi", dotted:"Reports directly to the CEO; works day-to-day within the Office of the CEO.",
+   base:"Lagos · Ikoyi HQ", since:"2026",
+   mandate:"Keeps the team the company's best product — owns the hiring pipeline, onboarding, people admin, and the office & vendor stack that makes the Ikoyi HQ work.",
+   owns:["Recruiting, onboarding & offboarding","HR records, leave & benefits admin","Office, vendors & petty cash","Team rituals, offsites & birthdays (serious business)"],
+   success:["Time-to-hire < 30 days","Onboarding score ≥ 4.5 / 5","Office & vendor costs within budget"]},
+  {id:"aisha", name:"Aisha Mohammed-Bello", initials:"AM", role:"General Manager — Property & Listings", dept:"property", level:2, reportsTo:"temi",
+   base:"Lagos · Ikoyi HQ", since:"2025 · founding team",
+   mandate:"Owns supply end-to-end: which homes make it onto Jollof Living, what they earn, and how hosts experience the platform. The P&L of every listing lives with her.",
+   owns:["Supply growth & city expansion","Host commercial terms & renewals","Listing quality & pricing guardrails","Field operations budget"],
+   success:["100% of homes Jollof Verified","Host retention ≥ 90%","Citywide occupancy ≥ 70%"]},
+  {id:"folake", name:"Folake Adeyemi", initials:"FA", role:"Host Relations Manager", dept:"property", level:1, reportsTo:"aisha",
+   base:"Lagos", since:"2025 · founding team",
+   mandate:"First call for every host — onboards new homes, settles concerns fast, drives renewals, and turns great hosts into the platform's loudest advocates.",
+   owns:["Host onboarding & documentation","Host support SLA & check-ins","Renewals & upsells (media, experiences)","Host community meetups"],
+   success:["Onboarding-to-live < 5 days","Host satisfaction ≥ 4.8 / 5","Annual host churn < 10%"]},
+  {id:"emeka", name:"Emeka Nwosu", initials:"EN", role:"Quality & Standards Auditor — “Jollof Verified”", dept:"property", level:1, reportsTo:"aisha",
+   base:"Lagos ⇄ Abuja · field", since:"2026",
+   mandate:"Keeper of the badge. Runs the 200-point inspection every home must pass before going live, and re-verifies annually — no exceptions, no favourites, not even the CEO's uncle's flat.",
+   owns:["200-point Jollof Verified inspections","Annual re-verification cycle","Incident spot-checks & audits","The standards handbook"],
+   success:["100% homes verified before launch","Quarterly audit pass-rate published","“As described” score ≥ 98%"]},
+  {id:"tobi", name:"Tobi Ajayi", initials:"TA", role:"Listings & Content Specialist", dept:"property", level:1, reportsTo:"aisha",
+   base:"Lagos", since:"2026",
+   mandate:"Makes every home look and read as good as it lives — photography direction, floor plans, listing copy — and feeds pricing insight back to Growth.",
+   owns:["Photo & video shoots","Listing copy & amenity data","Floor plans & 3D tours","Seasonal refresh of top listings"],
+   success:["Listing completeness at 100%","Live < 48h after audit pass","Listing conversion above city benchmark"]},
+  {id:"yusuf", name:"Yusuf Attah", initials:"YA", role:"Operations & Logistics Coordinator", dept:"property", level:1, reportsTo:"aisha",
+   base:"Abuja", since:"2026",
+   mandate:"The on-ground layer in Abuja and landing support in Lagos — key handovers, airport transfers, housekeeping crews, maintenance vendors and check-in cover.",
+   owns:["Key & smart-lock access management","Transfer & errand vendor pool","Preventive maintenance schedule","Turnover-day coordination"],
+   success:["Check-in issues < 1% of stays","Vendor jobs closed < 24h","Zero security incidents"]},
+  {id:"ngozi", name:"Ngozi Eze", initials:"NE", role:"Head of Guest Experience & Concierge", dept:"gx", level:2, reportsTo:"temi",
+   base:"Lagos", since:"2025 · founding team",
+   mandate:"Owns the stay from booking to goodbye — the human concierge desk and the “Jollof” AI behind it, plus the recovery playbook for the rare day anything slips.",
+   owns:["Guest support & concierge desk (07:00–23:00)","AI concierge quality & escalation rules","Reviews, refunds & service recovery","Experience partners — chefs, boats, tours"],
+   success:["Average rating ≥ 4.9★","First response < 5 minutes","Issues fixed within the same stay"]},
+  {id:"damilola", name:"Damilola Adeyemi", initials:"DA", role:"Concierge & Support Associate — Lagos", dept:"gx", level:1, reportsTo:"ngozi",
+   base:"Lagos", since:"2026",
+   mandate:"Front line of Nigerian hospitality in Lagos — booking tweaks, late checkouts, private chefs, and the calm voice at 11pm when a flight is delayed.",
+   owns:["Lagos guest queue","Concierge bookings — transfers, chefs, experiences","White-glove check-in day calls","Review follow-ups"],
+   success:["CSAT ≥ 4.9 / 5","Median resolution < 2 hours","Experience upsell attach ≥ 15%"]},
+  {id:"zainab", name:"Zainab Idris", initials:"ZI", role:"Guest Experience Associate — Abuja", dept:"gx", level:1, reportsTo:"ngozi",
+   base:"Abuja", since:"2026",
+   mandate:"Abuja's guest advocate — covers the Maitama flagships and corporate accounts, and works hand-in-glove with Yusuf on everything on the ground.",
+   owns:["Abuja guest queue","Corporate guest care — Jollof for Business","Local experience partners","Abuja review responses"],
+   success:["CSAT ≥ 4.8 / 5","Corporate rebook rate ≥ 60%","First response < 5 minutes"]},
+  {id:"ikenna", name:"Ikenna Duru", initials:"ID", role:"Chief Technology Officer — Product & Engineering", dept:"tech", level:2, reportsTo:"temi",
+   base:"Lagos · hybrid", since:"2025 · founding team",
+   mandate:"Builds the platform hosts and guests trust with their money and their homes — architecture, roadmap, release quality, and the AI stack shipped with Femi.",
+   owns:["Platform architecture & uptime","Product roadmap, with the CEO","Engineering standards & hiring","Escrow-flow integrity, with Finance"],
+   success:["99.9% uptime","Weekly release train, zero drama","Zero critical payment defects"]},
+  {id:"femi", name:"Femi Adebisi", initials:"FB", role:"Product & AI Lead", dept:"tech", level:1, reportsTo:"ikenna",
+   base:"Lagos · hybrid", since:"2026",
+   mandate:"Owns the “Jollof” AI concierge, smart search, dynamic pricing suggestions and the data behind them — AI that feels like hospitality, never a chatbot.",
+   owns:["AI concierge quality — English, Pidgin & Yoruba","Search, ranking & personalisation","Pricing-suggestion models","AI evaluation & safety guardrails"],
+   success:["AI resolves ≥ 60% of chats unaided","Measurable booking-conversion lift","Hallucination rate < 0.5%"]},
+  {id:"bright", name:"Bright Effiong", initials:"BE", role:"Senior Full-Stack Engineer", dept:"tech", level:1, reportsTo:"ikenna",
+   base:"Remote · Port Harcourt", since:"2026",
+   mandate:"Payments and trust tech — the escrow flow, host payout tools and admin dashboards, built to bank-grade standards because the brand depends on it.",
+   owns:["Escrow & gateways — Paystack, Flutterwave, Stripe","Host dashboard & payout tooling","Admin & verification tooling","API performance"],
+   success:["Payout accuracy 100%","Escrow released < 2 min after check-in","p95 page load < 1.8s"]},
+  {id:"halima", name:"Halima Suleiman", initials:"HS", role:"Full-Stack Engineer", dept:"tech", level:1, reportsTo:"ikenna",
+   base:"Lagos · hybrid", since:"2026",
+   mandate:"Guest-side product — the booking journey, wishlist, trips and notifications, plus the polish that makes the site feel five-star on a mid-range phone.",
+   owns:["Booking flow & checkout UX","Guest account, trips & wishlist","Mobile performance & accessibility","Maps & chat integrations"],
+   success:["Booking completion ≥ 85%","Mobile Lighthouse ≥ 90","Zero P1 UI regressions per release"]},
+  {id:"tomiwa", name:"Tomiwa Alabi", initials:"TO", role:"Growth & Marketing Lead", dept:"growth", level:2, reportsTo:"temi",
+   base:"Lagos", since:"2026",
+   mandate:"Owns demand — paid, organic, partnerships and the Jollof Club — and every naira behind them. Builds the audience the finance team can plan on.",
+   owns:["Performance marketing & SEO","Jollof Club membership growth","Corporate pipeline — Jollof for Business","Brand campaigns — Detty December & beyond"],
+   success:["Direct-booking share ≥ 55%","Repeat-stay rate ≥ 35%","CAC payback < 3 months"]},
+  {id:"efe", name:"Efe Oghenekaro", initials:"EO", role:"Content, Social & Community Manager", dept:"growth", level:1, reportsTo:"tomiwa",
+   base:"Lagos", since:"2026",
+   mandate:"The voice of the brand — the Journal, socials, host & guest stories, and the community that makes Jollof Living feel like a table everyone is welcome at.",
+   owns:["Journal & neighbourhood guides","Instagram, X & TikTok","Email & WhatsApp community","PR & founder content support"],
+   success:["90k monthly social reach","Journal → booking click-through","Email open rate ≥ 38%"]},
+  {id:"chiamaka", name:"Chiamaka Obi", initials:"CO", role:"Finance Lead / Accountant", dept:"finance", level:2, reportsTo:"temi",
+   base:"Lagos", since:"2025 · founding team",
+   mandate:"Keeps the books bank-clean — management accounts, payroll, VAT & WHT filings — and the unit economics every other team plans against.",
+   owns:["Monthly management accounts","Payroll, PAYE, VAT & WHT filings","Budgets & variance reviews with each lead","External statutory audit support"],
+   success:["Books closed by day 5","Statutory filings 100% on time","Variance to budget < 5%"]},
+  {id:"segun", name:"Segun Ogunleye", initials:"SO", role:"Payments & Escrow Officer", dept:"finance", level:1, reportsTo:"chiamaka",
+   base:"Lagos", since:"2026",
+   mandate:"Moves every naira correctly — escrow ledgers, host payouts, refunds and gateway reconciliation across Paystack, Flutterwave and Stripe.",
+   owns:["Daily escrow reconciliation","Host payouts — T+1 after check-in","Refunds & chargebacks","Gateway fee & FX analysis"],
+   success:["Reconciliation breaks = 0 by day 2","Payouts 100% on schedule","Chargeback losses < 0.1%"]},
+  {id:"bisi", name:"Bisi Afolayan", initials:"BA", role:"Legal, Compliance & Data Protection Officer", dept:"legal", level:2, reportsTo:"temi",
+   base:"Lagos", since:"2025 · founding team",
+   mandate:"The company's independent conscience — contracts, NDPR/GDPR compliance, disputes and fair-play enforcement, with an unfiltered line to the Board on data protection.",
+   owns:["Host, guest, partner & staff contracts","NDPR / GDPR compliance & DPO duties","Trust & safety, anti-discrimination enforcement","Regulatory watch — hospitality & payments"],
+   success:["Contract turnaround < 3 days","Zero NDPR breaches","Disputes resolved < 10 days median"]},
+];
+const PILLARS = ["office","property","gx","tech","growth","finance","legal"];
+const LEVEL_NAME = {3:"Executive",2:"Team lead",1:"Team member"};
+
+/* ============================================================
+   RENDER HELPERS
+   ============================================================ */
+const $  = (s,el)=> (el||document).querySelector(s);
+const $$ = (s,el)=> Array.from((el||document).querySelectorAll(s));
+const byId = {}; PEOPLE.forEach(p=> byId[p.id]=p);
+const deptById = {}; DEPTS.forEach(d=> deptById[d.id]=d);
+const peopleIn = id => PEOPLE.filter(p=> p.dept===id);
+const reportsOf = id => PEOPLE.filter(p=> p.reportsTo===id);
+const ico = (inner,cls)=> `<svg class="ico ${cls||""}" viewBox="0 0 24 24" aria-hidden="true">${inner}</svg>`;
+const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>';
+
+/* ---------- org chart ---------- */
+function personRow(p, lead){
+  return `<button class="p-row" data-person="${p.id}" title="Open role brief">
+    <span class="${AVA[p.level]}">${p.initials}</span>
+    <span style="min-width:0"><b>${p.name.split(" ")[0]} ${p.name.split(" ").slice(-1)[0].replace(/[“”]/g,"")}</b><span>${p.role}</span></span>
+    ${lead?'<span class="lead-tag">Lead</span>':""}
+  </button>`;
+}
+function renderTree(){
+  const ceo = byId.temi;
+  const pillars = PILLARS.map(id=>{
+    const d = deptById[id], team = peopleIn(id).filter(p=>p.id!==d.lead);
+    const leadRow = personRow(byId[d.lead], true);
+    const rows = team.map(p=>personRow(p, false)).join("");
+    return `<li>
+      <div class="node">
+        <button class="dept-head-btn" data-dept="${d.id}" title="Jump to team detail">
+          <span class="dico">${ico(d.icon)}</span>
+          <h4>${d.name}</h4>
+          <div class="dsub">${d.sub}</div>
+        </button>
+        <span class="badge count">${team.length+1} ${team.length?"people":"person"}</span>
+        <div class="people-list">${leadRow}${rows}</div>
+      </div>
+    </li>`;
+  }).join("");
+  $("#orgTree").innerHTML = `
+    <div class="board-block">
+      <div class="board-card">Board of Directors · 3 non-executive members</div>
+      <div class="board-drop"></div>
+    </div>
+    <ul class="root">
+      <li>
+        <button class="node ceo-node" data-person="${ceo.id}" title="Open role brief">
+          <span class="avatar">${ceo.initials}</span>
+          <h3>${ceo.name}</h3>
+          <div class="role">${ceo.role}</div>
+          <div class="cnote">${reportsOf(ceo.id).length} direct reports · every team, one table</div>
+        </button>
+        <ul>${pillars}</ul>
+      </li>
+    </ul>`;
+}
+
+/* ---------- departments ---------- */
+function renderDepts(){
+  $("#deptGrid").innerHTML = DEPTS.map(d=>{
+    const team = peopleIn(d.id);
+    const chips = team.map(p=>`<button class="team-chip" data-person="${p.id}">
+        <span class="${AVA[p.level]}">${p.initials}</span>
+        <span>${p.name.split(" ")[0]} ${p.name.split(" ").slice(-1)[0].replace(/[“”]/g,"")}${p.level===2?' <small>· Lead</small>':""}</span>
+      </button>`).join("");
+    const rt = d.id==="office" ? "Reports to: the Board of Directors (non-executive)"
+      : `Reports to: ${byId[byId[d.lead].reportsTo].name.split(" ")[0]} ${byId[byId[d.lead].reportsTo].name.split(" ").slice(-1)[0].replace(/[“”]/g,"")} — ${byId[d.lead].role}`;
+    return `<article class="dept-card reveal" id="dept-${d.id}">
+      <div class="dept-top">
+        <span class="why-ico">${ico(d.icon)}</span>
+        <div><h3>${d.name}</h3><div class="dsub">${d.sub}</div></div>
+        <span class="badge count">${team.length} ${team.length>1?"people":"person"}</span>
+      </div>
+      <p class="mission">“${d.mission}”</p>
+      <h5>Core responsibilities</h5>
+      <ul class="resp">${d.resp.map(r=>`<li>${CHECK}<span>${r}</span></li>`).join("")}</ul>
+      <h5>KPIs this team owns</h5>
+      <div class="kpi-chips">${d.kpis.map(k=>`<span>${k}</span>`).join("")}</div>
+      <h5>Inside the team</h5>
+      <div class="team-chips">${chips}</div>
+      <div class="rline">${rt}</div>
+    </article>`;
+  }).join("");
+}
+
+/* ---------- directory ---------- */
+const state = {dept:"all", q:""};
+function dirRows(){
+  let list = PEOPLE.filter(p=> (state.dept==="all" || p.dept===state.dept) &&
+    (!state.q || (p.name+" "+p.role+" "+p.base).toLowerCase().includes(state.q)));
+  const order = PILLARS.indexOf.bind(PILLARS);
+  list.sort((a,b)=> order(a.dept)-order(b.dept) || b.level-a.level);
+  return list;
+}
+function renderDir(){
+  const list = dirRows();
+  $("#dirBody").innerHTML = list.map((p,i)=>{
+    const boss = p.reportsTo ? byId[p.reportsTo] : null;
+    return `<tr data-person="${p.id}" tabindex="0" role="button" aria-label="Open role brief for ${p.name}">
+      <td><span class="who"><span class="${AVA[p.level]}">${p.initials}</span>
+        <span><b><i class="lvl-dot" style="background:${p.level===3?"var(--gold-grad)":p.level===2?"var(--green)":"var(--bg-3);border:1px solid var(--line)"}"></i>${p.name}</b><small>${LEVEL_NAME[p.level]}</small></span></span></td>
+      <td>${p.role}</td>
+      <td>${deptById[p.dept].name}</td>
+      <td>${boss ? boss.name : "Board of Directors"}</td>
+      <td>${p.base}</td>
+    </tr>`;
+  }).join("") || `<tr><td colspan="5" style="text-align:center;padding:34px;color:var(--ink-faint)">No one matches that search — try another name or team.</td></tr>`;
+  $("#dirCount").textContent = `Showing ${list.length} of ${PEOPLE.length} people · ${state.dept==="all" ? "all teams" : deptById[state.dept].name}`;
+}
+function renderFilters(){
+  const counts = {}; PEOPLE.forEach(p=> counts[p.dept]=(counts[p.dept]||0)+1);
+  const chip = (id,label,n)=>`<button class="fchip ${state.dept===id?"on":""}" data-dept="${id}">${label}${n!=null?` · ${n}`:""}</button>`;
+  $("#filterChips").innerHTML = chip("all","All",PEOPLE.length) +
+    PILLARS.map(id=>chip(id, deptById[id].name, counts[id])).join("");
+}
+
+/* ---------- person sheet ---------- */
+function openSheet(id){
+  const p = byId[id]; if(!p) return;
+  const d = deptById[p.dept];
+  const boss = p.reportsTo ? byId[p.reportsTo] : null;
+  const reps = reportsOf(p.id);
+  $("#sheetBody").innerHTML = `
+    <div class="sheet-top">
+      <span class="badge">${d.name}</span>
+      <span class="badge ok">${LEVEL_NAME[p.level]}</span>
+    </div>
+    <div class="sheet-id">
+      <span class="avatar lg ${p.level===3?"":p.level===2?"green":"ivory"}">${p.initials}</span>
+      <div><h3>${p.name}</h3><div class="role">${p.role}</div></div>
+    </div>
+    <div class="meta-grid">
+      <div><div class="k">Reports to</div><div class="v">${boss ? boss.name : "Board of Directors (non-executive)"}</div></div>
+      <div><div class="k">Direct reports</div><div class="v">${reps.length ? reps.length + (reps.length>1?" people":" person") + " · " + reps.map(r=>r.name.split(" ")[0]).join(", ") : "—"}</div></div>
+      <div><div class="k">Base</div><div class="v">${p.base}</div></div>
+      <div><div class="k">At Jollof since</div><div class="v">${p.since}</div></div>
+    </div>
+    <h5>The mandate</h5>
+    <p class="mandate">${p.mandate}</p>
+    <h5>Owns</h5>
+    <ul class="owns-list">${p.owns.map(o=>`<li>${CHECK}<span>${o}</span></li>`).join("")}</ul>
+    <h5>Success is measured by</h5>
+    <ul class="succ-list">${p.success.map(s=>`<li>${s}</li>`).join("")}</ul>
+    ${p.dotted ? `<div class="dotted-note">◈ ${p.dotted}</div>` : ""}
+    ${p.id==="temi" ? `<div class="dotted-note">◈ Accountable to a three-member non-executive Board; statutory audit is external.</div>` : ""}`;
+  $("#sheet").classList.add("open");
+  document.body.style.overflow = "hidden";
+  $(".sheet-x").focus();
+}
+function closeSheet(){
+  $("#sheet").classList.remove("open");
+  document.body.style.overflow = "";
+}
+
+/* ============================================================
+   EVENTS
+   ============================================================ */
+document.addEventListener("click", e=>{
+  const t = e.target;
+  const person = t.closest("[data-person]");
+  if(person){ openSheet(person.getAttribute("data-person")); return; }
+  const deptBtn = t.closest("[data-dept]");
+  if(deptBtn && deptBtn.classList.contains("dept-head-btn")){
+    const el = $("#dept-"+deptBtn.getAttribute("data-dept"));
+    if(el) el.scrollIntoView({behavior:"smooth", block:"start"});
+    return;
+  }
+  const fchip = t.closest(".fchip");
+  if(fchip){ state.dept = fchip.getAttribute("data-dept"); renderFilters(); renderDir(); return; }
+  if(t.closest("[data-close]")) closeSheet();
+});
+document.addEventListener("keydown", e=>{
+  if(e.key==="Escape") closeSheet();
+  if(e.key==="Enter" && e.target.matches("tr[data-person]")) openSheet(e.target.getAttribute("data-person"));
+});
+$("#dirSearch").addEventListener("input", e=>{ state.q = e.target.value.trim().toLowerCase(); renderDir(); });
+
+/* theme */
+function applyTheme(t){
+  document.documentElement.setAttribute("data-theme", t);
+  try{ localStorage.setItem("jl:org-theme", t); }catch(e){}
+  const bi = $("#brandImg"), fl = $("#footLogo");
+  if(bi) bi.src = t==="dark" ? "assets/img/logo-dark.png" : "assets/img/logo-light.png";
+  if(fl) fl.src = t==="dark" ? "assets/img/logo-dark.png" : "assets/img/logo-light.png";
+}
+$("#themeBtn").addEventListener("click", ()=>{
+  applyTheme(document.documentElement.getAttribute("data-theme")==="dark" ? "light" : "dark");
+});
+applyTheme(document.documentElement.getAttribute("data-theme")||"light");
+
+/* header shadow + active nav */
+addEventListener("scroll", ()=>{
+  $("#header").classList.toggle("scrolled", scrollY>30);
+  const secs = ["chart","departments","directory"].map(id=>$("#"+id));
+  let cur = "";
+  secs.forEach(s=>{ if(s.getBoundingClientRect().top < 140) cur = s.id; });
+  $$(".nav-links a").forEach(a=> a.classList.toggle("active", a.getAttribute("href")==="#"+cur));
+}, {passive:true});
+
+/* reveal + count-up */
+function observeReveals(){
+  const io = new IntersectionObserver(es=> es.forEach(en=>{
+    if(en.isIntersecting){ en.target.classList.add("in"); io.unobserve(en.target); }
+  }), {threshold:.12});
+  $$(".reveal,.stagger").forEach(el=> io.observe(el));
+}
+(function countUp(){
+  const io = new IntersectionObserver(es=> es.forEach(en=>{
+    if(!en.isIntersecting) return;
+    const el = en.target, end = +el.getAttribute("data-count"), t0 = performance.now();
+    (function tick(now){
+      const k = Math.min((now-t0)/900, 1);
+      el.textContent = Math.round(end * (1-Math.pow(1-k,3)));
+      if(k<1) requestAnimationFrame(tick);
+    })(t0);
+    io.unobserve(el);
+  }), {threshold:.4});
+  $$(".num[data-count]").forEach(el=> io.observe(el));
+})();
+
+/* boot */
+$("#yearNow").textContent = new Date().getFullYear();
+renderTree();
+renderDepts();
+renderFilters();
+renderDir();
+observeReveals();
+</script>
+</body>
+</html>
