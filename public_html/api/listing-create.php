@@ -52,15 +52,15 @@ try {
         DB::insert('property_images', ['property_id' => $pid, 'path' => mb_substr($ph, 0, 190), 'sort_order' => (int) $i]);
     }
 
-    if ((int) $user['is_host'] !== 1) {
-        DB::update('users', ['is_host' => 1], 'id = ?', [$uid]);
-    }
-
     DB::commit();
 } catch (Throwable $ex) {
     DB::rollback();
     json_fail('We could not save that listing. Please try again.');
 }
+
+// Listing a property makes you an owner: promote the account and give it the
+// workspace rows the dashboard expects. Idempotent for existing owners.
+Auth::provisionHost($uid);
 
 Repo::flush();
 Repo::notify($uid, 'Listing submitted', $title . ' is with our verification team — expect an update within 24 hours.', 'home');

@@ -5,9 +5,20 @@
 
 /* ---------------- HOST LANDING ---------------- */
 function pHost(){
-  return `${pageHead([["Home",URL("/")],["Host"]],"Host with <em class='serif-i'>Jollof Living</em>","We handle photography, pricing intelligence, guest screening and payouts — you keep 88% and the compliments.",
-    `<a class="btn btn-gold" href="${URL('/host/onboarding')}">Start the listing wizard</a><a class="btn btn-ghost" href="${URL('/host/dashboard')}">Open host dashboard</a>`)}
+  // The call to action depends on who is looking: an owner goes straight to
+  // their workspace, a signed-in customer is offered the upgrade, and a
+  // visitor is invited to create an owner account.
+  const cta = IS_OWNER
+    ? `<a class="btn btn-gold" href="${URL('/host/onboarding')}">Add a listing</a><a class="btn btn-ghost" href="${URL('/host/dashboard')}">Open my dashboard</a>`
+    : USER
+      ? `<button class="btn btn-gold" id="hostUpgrade">Start hosting</button><a class="btn btn-ghost" href="${URL('/host/onboarding')}">See the listing wizard</a>`
+      : `<a class="btn btn-gold" href="${URL('/auth?mode=register&type=owner')}">Create an owner account</a><a class="btn btn-ghost" href="${URL('/auth')}">Sign in</a>`;
+  const upgradeNote = (!IS_OWNER && USER)
+    ? `<div class="ai-callout" style="margin-bottom:24px">${I.spark}<span><b>You're signed in as a guest.</b> Turn on hosting to publish listings and open your owner dashboard — you keep your trips, wishlists and points.</span></div>`
+    : "";
+  return `${pageHead([["Home",URL("/")],["Host"]],"Host with <em class='serif-i'>Jollof Living</em>","We handle photography, pricing intelligence, guest screening and payouts — you keep 88% and the compliments.",cta)}
   <div class="page-body"><div class="wrap">
+    ${upgradeNote}
     <div class="grid-4">
       ${[["88%","Host payout","plus automatic weekly transfers"],["24h","Average time to first booking","for optimised listings"],["−12%","Occupancy lift","from AI pricing and photography"],["120+","Cities & features","one platform, everything included"]].map(s=>`
       <div class="stat-kpi"><div class="lbl">${s[2]}</div><div class="val gold-text">${s[0]}</div><div style="font-size:14px">${s[1]}</div></div>`).join("")}
@@ -48,10 +59,42 @@ function pHost(){
       </div>
       <div class="panel"><h3 style="font-size:19px">Multi-property &amp; team</h3>
         <p class="muted" style="font-size:14px">Manage every listing from one dashboard. Invite co-hosts and property managers with role-based permissions — admin, calendar, messaging, finance.</p>
-        <div class="btnrow" style="margin-top:14px"><button class="btn btn-ghost btn-sm" onclick="toast('Co-host invitation sent','users')">${I.users} Invite co-host</button><button class="btn btn-ghost btn-sm" data-goto="/host/dashboard?tab=listings">My listings</button></div>
+        <div class="btnrow" style="margin-top:14px">${IS_OWNER?`<button class="btn btn-ghost btn-sm" data-goto="/host/dashboard?tab=team">${I.users} Invite co-host</button>`:""}${IS_OWNER?`<button class="btn btn-ghost btn-sm" data-goto="/host/dashboard?tab=listings">My listings</button>`:""}</div>
       </div>
     </div>
   </div></div>`;
+}
+
+function bindHost(){
+  /* Earnings estimator — the sliders exist on this page too, and without
+     this binding they move but nothing recalculates. */
+  const rate=$("#hRate"), occ=$("#hOcc");
+  if(rate && occ){
+    const rcalc=()=>{
+      const r=+rate.value, o=+occ.value;
+      const m=r*1000*30*o/100;
+      $("#hRateVal").textContent="\u20A6"+(r*1000).toLocaleString();
+      $("#hOccVal").textContent=o+"%";
+      [rate,occ].forEach(el=>el.style.setProperty("--fill",((el.value-el.min)/(el.max-el.min)*100)+"%"));
+      const set=(id,v)=>{ const el=$(id); if(el) el.textContent=v; };
+      set("#hAvg","\u20A6"+Math.round(r*1000).toLocaleString()+" / night");
+      set("#hGross","\u20A6"+Math.round(m).toLocaleString()+" / mo");
+      set("#hNet","\u20A6"+Math.round(m*0.88).toLocaleString()+" / mo");
+      set("#hYear","\u20A6"+Math.round(m*12*0.88).toLocaleString());
+    };
+    [rate,occ].forEach(el=>el.addEventListener("input",rcalc));
+    rcalc();
+  }
+
+  /* Turn an existing customer account into an owner account. */
+  const up=$("#hostUpgrade");
+  if(up) up.addEventListener("click",async ()=>{
+    up.disabled=true; const label=up.textContent; up.textContent="Setting things up…";
+    const r=await api("host-action.php",{action:"upgrade"});
+    if(!r.ok){ up.disabled=false; up.textContent=label; toast(r.message||"Could not enable hosting","x"); return; }
+    toast(r.message||"Hosting enabled ✨","spark");
+    setTimeout(()=>{ location.href=(r.data&&r.data.redirect)||URL("/host/dashboard"); },600);
+  });
 }
 
 /* wizard constants */
@@ -306,287 +349,572 @@ function wizAddPhoto(){
 }
 
 /* ---------------- HOST DASHBOARD ---------------- */
+/* ============================================================
+   OWNER (HOST) DASHBOARD
+   Every panel below reads HOST, which the server builds from the
+   owner's own rows (Repo::hostState). Nothing here is invented:
+   when an owner has no data yet the panels say so rather than
+   showing someone else's numbers.
+   ============================================================ */
+
+/* Small helpers so empty accounts render gracefully. */
+function hdStat(){ return HOST.stats||{}; }
+function hdEmpty(emoji,title,body,cta){
+  return `<div class="panel hd-empty">
+    <span class="hd-emoji">${emoji}</span>
+    <h3 style="font-size:19px">${esc(title)}</h3>
+    <p class="small" style="max-width:420px;margin:6px auto 0">${esc(body)}</p>
+    ${cta||""}
+  </div>`;
+}
+const hdAddCta = `<div class="btnrow" style="justify-content:center;margin-top:14px">
+  <button class="btn btn-gold btn-sm" data-goto="/host/onboarding">Add a listing</button></div>`;
+/* Charts divide by (length-1), so guard against 0 and 1 point. */
+function hdSafeSeries(rows){
+  const r=(rows||[]).filter(x=>x&&typeof x.v==="number");
+  if(!r.length) return null;
+  return r.length===1 ? [r[0],{...r[0]}] : r;
+}
+
 function pHostDashboard(q){
   const tab=(q&&q.tab)||"overview";
   const nav=[["overview","Overview","grid"],["calendar","Calendar & pricing","calendar"],["listings","Listings","building"],["analytics","Analytics","eye"],["revenue","Revenue management","spark"],["ai","AI tools","bot"],["team","Team & co-hosts","users"],["templates","Message templates","send"],["channels","Channel manager","globe"],["payouts","Payouts","wallet"]];
-  return `${pageHead([["Home",URL("/")],["Host",URL("/host")],["Dashboard"]],"Host <em class='serif-i'>dashboard</em>","Earnings, occupancy, bookings and every tool of the Jollof Living host suite.",
-    `<span class="badge ok">${I.gold} Superhost</span><span class="badge">KYC verified</span>`)}
+  const st=hdStat();
+  const badges=[
+    `<span class="badge">${st.listings||0} listing${(st.listings||0)===1?"":"s"}</span>`,
+    st.rating?`<span class="badge ok">${I.gold} ${st.rating} rating</span>`:"",
+    `<span class="badge">Take rate ${Math.round((st.takeRate||0.12)*100)}%</span>`,
+  ].join("");
+  return `${pageHead([["Home",URL("/")],["Host",URL("/host")],["Dashboard"]],"Owner <em class='serif-i'>dashboard</em>","Your listings, bookings, earnings and payouts — all in one place.",badges)}
   <div class="page-body"><div class="wrap">
     <div class="admin-shell">
       <nav class="admin-nav">
-        <div class="sec">Host tools</div>
+        <div class="sec">Owner tools</div>
         ${nav.map(([k,l,i])=>`<a href="${URL("/host/dashboard")}?tab=${k}" class="${tab===k?"active":""}">${I[i]} ${l}</a>`).join("")}
       </nav>
       <div id="hdContent">${(()=>{ const m=[["overview",hdOverview],["calendar",hdCalendar],["listings",hdListings],["analytics",hdAnalytics],["revenue",hdRevenue],["ai",hdAI],["team",hdTeam],["templates",hdTemplates],["channels",hdChannels],["payouts",hdPayouts]].find(([k])=>k===tab)||["overview",hdOverview]; return m[1](); })()}</div>
     </div>
   </div></div>`;
 }
+
 function hdOverview(){
-  const weekends=[[180,220,260,290,330,380,420,400,440,470,510,560].map((v,i)=>({v,l:["Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec","Jan"][i]}))];
+  const st=hdStat();
+  if(!HOST.listings.length) return hdEmpty("🏠","No listings yet","Once you publish your first residence, your occupancy, earnings and bookings appear here.",hdAddCta);
+
+  const series=hdSafeSeries(HOST.earnings);
+  const upcoming=(HOST.bookings||[]).filter(b=>["pending","confirmed"].includes(b.status)).slice(0,5);
+  const sources=(HOST.sources||[]).filter(s=>s.v>0);
+  const palette=["var(--accent)","var(--green)","var(--gold-soft)","var(--line)"];
+  const srcTotal=sources.reduce((a,s)=>a+s.v,0);
+
   return `
   <div class="grid-4">
-    ${[["Occupancy","78%","+6 pts vs last month","up"],["ADR (avg daily rate)","₦219k","+3% seasonally","up"],["RevPAR","₦171k","+9%","up"],["Booking lead time","11 days","−2 days faster","up"]].map(k=>`
-    <div class="stat-kpi"><div class="lbl">${k[0]}</div><div class="val">${k[1]}</div><div class="delta ${k[3]}" >${k[2]}</div></div>`).join("")}
+    ${[["Occupancy",(st.occupancy||0)+"%","last 90 days"],
+       ["ADR (avg daily rate)",st.adr?K(st.adr):"—","per night sold"],
+       ["RevPAR",st.revpar?K(st.revpar):"—","revenue per available night"],
+       ["Booking lead time",(st.leadTime||0)+" days","average"]].map(k=>`
+    <div class="stat-kpi"><div class="lbl">${k[0]}</div><div class="val">${k[1]}</div><div class="small">${k[2]}</div></div>`).join("")}
+  </div>
+  <div class="grid-4" style="margin-top:14px">
+    ${[["Gross earnings",st.gross?fmt(st.gross):"—","all time"],
+       ["Your net",st.net?fmt(st.net):"—",`after ${Math.round((st.takeRate||0.12)*100)}% platform fee`],
+       ["Held in escrow",st.escrowHeld?fmt(st.escrowHeld):"—","released after check-in"],
+       ["Bookings",String(st.bookings||0),`${st.upcoming||0} upcoming`]].map(k=>`
+    <div class="stat-kpi"><div class="lbl">${k[0]}</div><div class="val" style="font-size:22px">${k[1]}</div><div class="small">${k[2]}</div></div>`).join("")}
   </div>
   <div class="grid-2" style="margin-top:18px">
     <div class="chart-box"><h4>Earnings — last 12 months</h4>
-      ${lineChart([180,220,260,290,330,380,420,400,440,470,510,560].map((v,i)=>({v,l:["Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec","Jan"][i]})),{fmt:v=>"₦"+v+"k"})}</div>
+      ${series?lineChart(series,{fmt:v=>"₦"+v+"k",labels:series.map(s=>s.l)}):`<p class="small">No earnings recorded yet.</p>`}</div>
     <div class="chart-box"><h4>Booking sources</h4>
-      ${donutChart([{v:46,c:"var(--accent)"},{v:27,c:"var(--green)"},{v:17,c:"var(--gold-soft)"},{v:10,c:"var(--line)"}],["78%","direct"])}
-      <div class="legend" style="justify-content:center"><span><i style="background:var(--accent)"></i>Jollof app & web</span><span><i style="background:var(--green)"></i>Channel partners</span><span><i style="background:var(--gold-soft)"></i>Referrals</span><span><i style="background:var(--line)"></i>Corporate</span></div>
+      ${srcTotal?`${donutChart(sources.map((s,i)=>({v:s.v,c:palette[i%palette.length]})),[String(srcTotal),"bookings"])}
+      <div class="legend" style="justify-content:center">${sources.map((s,i)=>`<span><i style="background:${palette[i%palette.length]}"></i>${esc(s.l)}</span>`).join("")}</div>`
+      :`<p class="small">No bookings yet — sources appear once guests start booking.</p>`}
     </div>
   </div>
   <div class="grid-2" style="margin-top:18px">
     <div class="panel"><h3 style="font-size:18px">Upcoming bookings</h3>
-      ${[["Sep 6 – Sep 10","4 nights · ₦740,000","The Island Retreat"],["Sep 14 – Oct 12","28 nights · ₦4.1m · split pay","Villa Azur"],["Oct 2 – Oct 5","3 nights · ₦495,000","The Onyx Penthouse"]].map(b=>`
-      <div class="krow"><span class="k"><b style="font-family:var(--fs-serif);font-size:16px">${b[0]}</b><br><span class="small">${b[2]}</span></span><span class="v">${b[1]}</span></div>`).join("")}
+      ${upcoming.length?upcoming.map(b=>`
+      <div class="krow"><span class="k"><b style="font-family:var(--fs-serif);font-size:16px">${esc(b.checkin)} → ${esc(b.checkout)}</b><br><span class="small">${esc(b.property)} · ${esc(b.guest||"Guest")}</span></span>
+      <span class="v">${fmt(b.total)}<div class="sub">${b.nights} night${b.nights===1?"":"s"} · ${esc(b.status)}</div></span></div>`).join("")
+      :`<p class="small">Nothing on the calendar yet.</p>`}
     </div>
     <div class="panel"><h3 style="font-size:18px">Quick actions</h3>
-      <div class="btnrow" style="margin-top:6px">
-        <button class="btn btn-green btn-sm" onclick="nav('/host/dashboard?tab=calendar')">${I.calendar} Block dates</button>
-        <button class="btn btn-green btn-sm" onclick="nav('/host/dashboard?tab=revenue')">${I.spark} Adjust pricing</button>
-        <button class="btn btn-green btn-sm" onclick="toast('Automated guest check-in instructions sent','send')">${I.send} Message templates</button>
-        <button class="btn btn-green btn-sm" onclick="toast('Invite sent — co-host will appear in Team','users')">${I.users} Invite co-host</button>
+      <div class="btnrow" style="margin-top:6px;flex-wrap:wrap">
+        <button class="btn btn-gold btn-sm" data-goto="/host/onboarding">${I.plus} Add a listing</button>
+        <a class="btn btn-ghost btn-sm" href="${URL("/host/dashboard")}?tab=calendar">${I.calendar} Edit calendar</a>
+        <a class="btn btn-ghost btn-sm" href="${URL("/host/dashboard")}?tab=payouts">${I.wallet} Payouts</a>
+        <a class="btn btn-ghost btn-sm" href="${JL.apiBase}host-report.php?r=earnings">${I.download} Earnings CSV</a>
       </div>
-      <div class="ai-callout" style="margin-top:14px">${I.spark}<span><b>AI forecast:</b> raising weekend rates by 15% through December is projected to add <b>₦1.8m</b> in revenue.</span></div>
+      ${st.listingsPending?`<div class="ai-callout" style="margin-top:14px">${I.clock}<span>${st.listingsPending} listing${st.listingsPending===1?" is":"s are"} still in verification.</span></div>`:""}
     </div>
   </div>`;
 }
+
+/* ------------------------------------------------ calendar & pricing */
 function hdCalendar(){
-  const m=new Date();
-  const days=new Date(m.getFullYear(),m.getMonth()+1,0).getDate();
-  const prices=[...Array(days)].map((_,i)=> 150000 + (i%7>=5?22000:0) + (i>20?18000:0));
+  if(!HOST.listings.length) return hdEmpty("📅","No calendar yet","Add a listing and you can set nightly prices and block dates here.",hdAddCta);
+  const cal=HOST.calendar||{days:[]};
+  const prop=cal.property;
+  const opts=HOST.listings.map(l=>`<option value="${l.id}"${prop&&prop.id===l.id?" selected":""}>${esc(l.name)}</option>`).join("");
   return `
   <div class="panel">
     <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
-      <h3 style="font-size:19px">${m.toLocaleDateString("en-GB",{month:"long",year:"numeric"})}</h3>
-      <span class="small">· click a date to edit its price</span>
+      <h3 style="font-size:19px" id="hdCalTitle">${esc(cal.monthLabel||"")}</h3>
+      <select class="sel" id="hdCalProp" style="max-width:260px">${opts}</select>
       <div class="btnrow" style="margin-left:auto">
-        <button class="btn btn-ghost btn-sm" onclick="toast('Date range blocked — message template offered','calendar')">${I.calendar} Block dates</button>
-        <button class="btn btn-ghost btn-sm" onclick="toast('Price rule applied to all selected dates','spark')">${I.spark} Bulk edit</button>
+        <button class="btn btn-ghost btn-sm" id="hdCalPrev">← Prev</button>
+        <button class="btn btn-ghost btn-sm" id="hdCalNext">Next →</button>
+        <button class="btn btn-ghost btn-sm" id="hdBulk">${I.spark} Bulk edit</button>
       </div>
     </div>
-    <div class="cal-grid" style="grid-template-columns:repeat(7,1fr);gap:6px" id="hdCal">
-      ${["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(d=>`<div class="dow">${d}</div>`).join("")}
-      ${Array.from({length:(new Date(m.getFullYear(),m.getMonth(),1).getDay()+6)%7}).map(()=>"<span></span>").join("")}
-      ${prices.map((p,i)=>`<div class="hdc pdate" style="border:1px solid var(--line-soft);border-radius:10px;padding:8px 4px;text-align:center;cursor:pointer;${i%7>=5?"border-color:var(--accent);background:var(--gold-soft)":""}" data-d="${i+1}" title="Edit price">
-        <div style="font-size:13px">${i+1}</div>
-        <div style="font-size:10px;color:var(--accent);white-space:nowrap">${K(p)}</div>
-        ${i>20?`<div style="font-size:9px;color:var(--ok)">booked</div>`:""}
-      </div>`).join("")}
-    </div>
-    <div class="small" style="margin-top:10px">Gold = weekend premium (+15%) · green = booked · click any date to open the price editor with AI suggestions.</div>
-  </div>
-  <div class="grid-2" style="margin-top:18px">
-    <div class="panel"><h3 style="font-size:17px">Availability rules</h3>
-      <div class="krow"><span class="k">Minimum stay</span><span class="v">2 nights · 7 on weekends</span></div>
-      <div class="krow"><span class="k">Maximum stay</span><span class="v">60 nights</span></div>
-      <div class="krow"><span class="k">Check-in window</span><span class="v">3:00 PM – 10:00 PM</span></div>
-      <div class="krow"><span class="k">Auto-block gap</span><span class="v">1 night between bookings</span></div>
-    </div>
-    <div class="panel"><h3 style="font-size:17px">Per-date pricing</h3>
-      <div class="krow"><span class="k">Base rate</span><span class="v">₦150,000</span></div>
-      <div class="krow"><span class="k">Weekend premium</span><span class="v" style="color:var(--accent)">+15%</span></div>
-      <div class="krow"><span class="k">Dec 20 – Jan 5 demand premium</span><span class="v" style="color:var(--accent)">+25%</span></div>
-      <div class="krow"><span class="k">Last-minute discount (48h)</span><span class="v">−15% auto</span></div>
+    <p class="small" style="margin-bottom:10px">Click a date to set its price or block it. Booked nights cannot be changed.</p>
+    <div class="cal-grid" style="grid-template-columns:repeat(7,1fr);gap:6px" id="hdCal">${hdCalCells(cal)}</div>
+    <div class="legend" style="margin-top:12px">
+      <span><i style="background:var(--gold-soft)"></i>Weekend</span>
+      <span><i style="background:var(--card-2)"></i>Booked</span>
+      <span><i style="background:var(--line)"></i>Blocked</span>
     </div>
   </div>`;
 }
+function hdCalCells(cal){
+  const dows=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(d=>`<div class="dow">${d}</div>`).join("");
+  const pad=Array.from({length:Math.max(0,cal.firstDow||0)}).map(()=>"<span></span>").join("");
+  const cells=(cal.days||[]).map(d=>{
+    const cls=["hd-cal-day"];
+    if(d.weekend) cls.push("is-weekend");
+    if(d.booked) cls.push("is-booked");
+    if(d.blocked) cls.push("is-blocked");
+    return `<div class="${cls.join(" ")}" data-day="${d.iso}" data-price="${d.price}" data-blocked="${d.blocked?1:0}" data-booked="${d.booked?1:0}" title="${d.booked?"Booked":"Edit price"}">
+      <div class="d">${d.day}</div>
+      <div class="p">${K(d.price)}</div>
+      ${d.booked?`<div class="s" style="color:var(--ok)">booked</div>`:d.blocked?`<div class="s" style="color:var(--muted)">blocked</div>`:""}
+    </div>`;
+  }).join("");
+  return dows+pad+cells;
+}
+
+/* -------------------------------------------------------- listings */
 function hdListings(){
-  const mine=[
-    ["The Island Retreat","Banana Island","₦240,000","92%","4.94","Live","ok","island-retreat"],
-    ["The Onyx Penthouse","Lekki Phase 1","₦185,000","81%","4.97","Live","ok","onyx"],
-    ["The Lagoon Villa","Victoria Island","₦175,000","76%","4.96","Live","ok","lagoon-villa"],
-  ];
-  const pending=S.hostListings.map(l=>[l.title,(l.area||"—")+(l.photos?` · ${l.photos} photo${l.photos>1?"s":""}`:""),fmt(l.rate),"—","—","In verification","warn",""]);
+  if(!HOST.listings.length) return hdEmpty("🏠","No listings yet","Publish your first residence to start receiving bookings.",hdAddCta);
   return `
   <div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th>Listing</th><th>Nightly</th><th>Occupancy</th><th>Rating</th><th>Status</th><th></th></tr></thead>
+    <thead><tr><th>Listing</th><th>Nightly</th><th>Occupancy</th><th>Rating</th><th>Earned</th><th>Status</th><th></th></tr></thead>
     <tbody>
-      ${[...mine,...pending].map(r=>`<tr>
-        <td><b class="strong">${esc(r[0])}</b><div class="sub">${esc(r[1])}</div></td>
-        <td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td>
-        <td><span class="pill-status ${r[6]}">${r[5]}</span></td>
-        <td><div class="btnrow">${r[7]?`<button class="btn btn-ghost btn-sm" data-goto="/stay/${r[7]}">View</button>`:""}
-        <button class="btn btn-ghost btn-sm" onclick="toast('Listing editor opened','edit')">${I.edit} Edit</button>
-        <button class="btn btn-ghost btn-sm" onclick="toast('Listing paused — calendar preserved','clock')">Pause</button></div></td>
-      </tr>`).join("")}
-    </tbody>
-  </table></div>
-  <div class="ai-callout" style="margin-top:16px">${I.spark}<span><b>AI listing optimizer:</b> three listings are missing “lagoon view” in their titles — adding it is projected to lift views by <b>+30%</b>. <button class="btn btn-gold btn-sm" style="margin-left:8px" onclick="toast('Optimisation applied to all listings ✨','spark')">Apply to all</button></span></div>`;
+      ${HOST.listings.map(l=>{
+        const level=l.status==="live"?"ok":(l.status==="paused"?"info":"warn");
+        const label=l.status==="live"?"Live":(l.status==="paused"?"Paused":(l.status==="pending"?"In verification":cap(l.status)));
+        return `<tr>
+        <td><b class="strong">${esc(l.name)}</b><div class="sub">${esc(l.area||"—")}${l.city?" · "+esc(l.city):""}</div></td>
+        <td>${fmt(l.price)}</td>
+        <td>${l.status==="live"?l.occupancy+"%":"—"}</td>
+        <td>${l.reviews?l.rating+" ("+l.reviews+")":"—"}</td>
+        <td>${l.revenue?fmt(l.revenue):"—"}</td>
+        <td><span class="pill-status ${level}">${label}</span></td>
+        <td><div class="btnrow">
+          ${l.status==="live"?`<button class="btn btn-ghost btn-sm" data-goto="/stay/${esc(l.slug)}">View</button>`:""}
+          <button class="btn btn-ghost btn-sm" data-hd-price="${l.id}" data-price="${l.price}" data-name="${esc(l.name)}">${I.edit} Price</button>
+          ${l.status==="live"?`<button class="btn btn-ghost btn-sm" data-hd-status="${l.id}" data-to="paused">Pause</button>`:""}
+          ${l.status==="paused"?`<button class="btn btn-green btn-sm" data-hd-status="${l.id}" data-to="live">Go live</button>`:""}
+        </div></td>
+      </tr>`;}).join("")}
+    </tbody></table></div>
+  <div class="btnrow" style="margin-top:14px"><button class="btn btn-gold btn-sm" data-goto="/host/onboarding">${I.plus} Add another listing</button></div>`;
 }
+
+/* -------------------------------------------------------- analytics */
 function hdAnalytics(){
-  const views=[120,300,420,380,520,640,580,760,830,910];
+  const st=hdStat();
+  if(!HOST.listings.length) return hdEmpty("📊","Nothing to analyse yet","Analytics appear once your first listing is live.",hdAddCta);
+  const series=hdSafeSeries(HOST.earnings);
+  const byListing=HOST.listings.filter(l=>l.revenue>0).map(l=>({l:l.name.length>16?l.name.slice(0,15)+"…":l.name,v:Math.round(l.revenue/1000)}));
   return `
   <div class="grid-3">
-    ${[["Profile views","8.4k","last 30 days"],["Conversion (view→book)","4.8%","vs 3.9% category avg"],["Search position","Top 3","for 'Lagos villa'"],["Competitors benchmark","12% below avg price","similar homes"],["Guest review score","4.95","132 reviews"],["New enquiries","31","this week"]].map(k=>`
-    <div class="stat-kpi"><div class="lbl">${k[1]}</div><div class="val" style="font-size:24px">${k[0]}</div><div class="small">${k[2]}</div></div>`).join("")}
+    ${[["Bookings (all time)",String(st.bookings||0),`${st.bookings30||0} in the last 30 days`],
+       ["Nights sold",String(st.nightsSold||0),"confirmed and completed"],
+       ["Occupancy",(st.occupancy||0)+"%","rolling 90 days"],
+       ["Guest rating",st.rating?String(st.rating):"—",`${st.reviews||0} review${(st.reviews||0)===1?"":"s"}`],
+       ["Gross revenue",st.gross?fmt(st.gross):"—","before platform fee"],
+       ["Awaiting approval",String(st.pending||0),"booking requests"]].map(k=>`
+    <div class="stat-kpi"><div class="lbl">${k[0]}</div><div class="val" style="font-size:22px">${k[1]}</div><div class="small">${k[2]}</div></div>`).join("")}
   </div>
   <div class="grid-2" style="margin-top:18px">
-    <div class="chart-box"><h4>Views &amp; enquiries (90 days)</h4>${lineChart(views.map((v,i)=>({v,l:["Jul","Jul","Aug","Aug","Aug","Aug","Sep","Sep","Sep","Sep"][i]})),{fmt:v=>v+" views"})}</div>
-    <div class="chart-box"><h4>Competitor benchmark</h4>
-      ${barChart([{l:"Yours",v:171,c:"var(--accent)"},{l:"Similar homes",v:185},{l:"Area average",v:205},{l:"Top 10%",v:260}])}
-      <p class="small" style="margin-top:8px">${I.spark} AI: “You're priced ~12% below comparable verified homes — a +8% raise is sustainable.”</p>
-    </div>
+    <div class="chart-box"><h4>Earnings trend</h4>
+      ${series?lineChart(series,{fmt:v=>"₦"+v+"k",labels:series.map(s=>s.l)}):`<p class="small">No earnings recorded yet.</p>`}</div>
+    <div class="chart-box"><h4>Revenue by listing</h4>
+      ${byListing.length?barChart(byListing):`<p class="small">No revenue recorded yet.</p>`}</div>
   </div>
   <div class="panel" style="margin-top:18px"><h3 style="font-size:18px">Export &amp; reports</h3>
     <div class="btnrow"><a class="btn btn-ghost btn-sm" href="${JL.apiBase}host-report.php?r=earnings">${I.download} Earnings CSV</a>
-    <button class="btn btn-ghost btn-sm" onclick="toast('Performance report downloaded (PDF)','download')">${I.download} Performance PDF</button>
     <a class="btn btn-ghost btn-sm" href="${JL.apiBase}host-report.php?r=payouts">${I.download} Payout statement</a></div>
   </div>`;
 }
+
+/* ------------------------------------------------ revenue management */
 function hdRevenue(){
+  const st=hdStat();
+  const rules=HOST.rules||[];
   return `
   <div class="grid-2">
     <div class="panel">
-      <h3 style="font-size:18px">Seasonal pricing rules</h3>
-      <div class="krow"><span class="k">Weekend premium (Fri–Sun)</span><span class="v">+15% ${sparkline([12,15,15,15,18,15,15])}</span></div>
-      <div class="krow"><span class="k">Detty December (Dec 15–Jan 5)</span><span class="v">+25% ${sparkline([8,10,14,18,25,25,22])}</span></div>
-      <div class="krow"><span class="k">Holiday Eids &amp; Easter</span><span class="v">+18%</span></div>
-      <div class="krow"><span class="k">Lean season (Feb–Apr)</span><span class="v">−10%</span></div>
-      <div class="krow"><span class="k">Last-minute (within 48h)</span><span class="v">−15% auto</span></div>
-      <button class="btn btn-green btn-sm" style="margin-top:10px" onclick="toast('New seasonal rule created — Dec 20 +25%','spark')">${I.plus} Add rule</button>
+      <h3 style="font-size:18px">Pricing rules</h3>
+      ${rules.length?rules.map(r=>`
+      <div class="krow"><span class="k">${esc(r.name)}<div class="sub">${esc(cap(r.kind))}${r.starts?` · ${esc(r.starts)}${r.ends?" → "+esc(r.ends):""}`:""}</div></span>
+        <span class="v">${r.adjust>0?"+":""}${r.adjust}%
+          <div class="btnrow" style="margin-top:6px">
+            <button class="btn btn-ghost btn-sm" data-rule-toggle="${r.id}">${r.active?"Pause":"Enable"}</button>
+            <button class="btn btn-ghost btn-sm" data-rule-del="${r.id}">Remove</button>
+          </div>
+        </span></div>`).join("")
+      :`<p class="small">No pricing rules yet. Add one to raise prices in peak season or discount quiet weeks.</p>`}
+      <button class="btn btn-green btn-sm" style="margin-top:10px" id="hdAddRule">${I.plus} Add rule</button>
     </div>
     <div class="stack">
-      <div class="panel"><h3 style="font-size:18px">What-if revenue model <span class="badge" style="vertical-align:2px">AI</span></h3>
-        <p class="small" style="margin-bottom:8px">Move the sliders — projected revenue recalculates instantly.</p>
-        <div class="slider-row"><div class="lab"><span>Min. stay (nights)</span><b id="rwA">2</b></div><input type="range" id="rwMin" min="1" max="7" value="2" oninput="$('#rwA').textContent=this.value;rwCalc()"></div>
-        <div class="slider-row"><div class="lab"><span>Price index</span><b id="rwB">100%</b></div><input type="range" id="rwPrice" min="80" max="125" value="100" oninput="$('#rwB').textContent=this.value+'%';rwCalc()"></div>
-        <div class="calc-out"><div class="row"><span>Projected annual revenue</span><span id="rwOut">₦41.2m</span></div>
-        <div class="row"><span>Projected occupancy</span><span id="rwOcc">78%</span></div></div>
+      <div class="panel"><h3 style="font-size:18px">What-if revenue model</h3>
+        <p class="small" style="margin-bottom:8px">Based on your real occupancy (${st.occupancy||0}%) and average rate (${st.adr?fmt(st.adr):"—"}).</p>
+        <div class="slider-row"><div class="lab"><span>Price index</span><b id="rwB">100%</b></div>
+          <input type="range" id="rwPrice" min="80" max="125" value="100" oninput="$('#rwB').textContent=this.value+'%';rwCalc()"></div>
+        <div class="calc-out">
+          <div class="row"><span>Projected annual gross</span><span id="rwOut">—</span></div>
+          <div class="row"><span>Projected occupancy</span><span id="rwOcc">${st.occupancy||0}%</span></div>
+          <div class="row"><span>Your net after fees</span><span id="rwNet">—</span></div>
+        </div>
       </div>
-      <div class="ai-callout">${I.spark}<span><b>AI demand forecast:</b> occupancy is projected to exceed <b>92%</b> between Dec 20 – Jan 5. Current prices are 8% below market.</span></div>
+      ${st.occupancy>85?`<div class="ai-callout">${I.spark}<span>Occupancy is above 85% — there is room to raise your nightly rate.</span></div>`
+        :st.occupancy&&st.occupancy<40?`<div class="ai-callout">${I.spark}<span>Occupancy is under 40% — a small price reduction or wider availability usually helps.</span></div>`:""}
     </div>
   </div>`;
 }
+
 function bindHostDashboard(){
+  const st=hdStat();
+
+  /* what-if model, driven by the owner's real numbers */
   window.rwCalc=()=>{
-    const min=+$("#rwMin").value, pr=+$("#rwPrice").value/100;
-    const occ=Math.min(96,Math.round(78-(min-2)*2+ (pr-1)*40));
-    const rev=41.2*pr*(occ/78);
-    $("#rwOut").textContent="₦"+(rev).toFixed(1)+"m";
-    $("#rwOcc").textContent=occ+"%";
+    const el=$("#rwPrice"); if(!el) return;
+    const pr=+el.value/100;
+    // Higher prices soften occupancy; a simple elasticity is honest enough
+    // for a planning tool and is clearly labelled as a projection.
+    const occ=Math.max(0,Math.min(100,Math.round((st.occupancy||0)*(1-(pr-1)*0.8))));
+    const annual=(st.adr||0)*pr*(st.listings||0)*365*(occ/100);
+    const out=$("#rwOut"), oc=$("#rwOcc"), net=$("#rwNet");
+    if(out) out.textContent=annual?fmt(Math.round(annual)):"—";
+    if(oc) oc.textContent=occ+"%";
+    if(net) net.textContent=annual?fmt(Math.round(annual*(1-(st.takeRate||0.12)))):"—";
   };
-  $$("#hdCal .pdate").forEach(c=>c.addEventListener("click",()=>{
-    openModal(`<h2 style="margin-bottom:4px">Price for Sep ${c.dataset.d}</h2>
-      <p class="small" style="margin-bottom:14px">AI suggests <b style="color:var(--accent)">₦165,000</b> for this date (weekend demand +4%).</p>
-      <div class="frm-row"><label>Nightly rate (₦)</label><input class="inp" type="number" value="150000" step="5000"></div>
-      <label class="chk" style="margin-bottom:12px"><input type="checkbox" checked> Apply AI suggestion</label>
-      <div class="btnrow"><button class="btn btn-gold" onclick="closeModal();toast('Date price updated — calendar synced to channels','spark')">Save price</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button></div>`);
-  }));
+  if($("#rwPrice")) window.rwCalc();
+
+  /* ---------------- calendar ---------------- */
+  const calState={month:(HOST.calendar&&HOST.calendar.month)||new Date().toISOString().slice(0,7),
+                  property:(HOST.calendar&&HOST.calendar.property&&HOST.calendar.property.id)||0};
+
+  async function calLoad(){
+    const r=await api("host-action.php",{action:"calendar",property:calState.property,month:calState.month});
+    if(!r.ok){ toast(r.message||"Could not load that month","x"); return; }
+    HOST.calendar=r.data.calendar;
+    calState.month=HOST.calendar.month;
+    const grid=$("#hdCal"), title=$("#hdCalTitle");
+    if(grid) grid.innerHTML=hdCalCells(HOST.calendar);
+    if(title) title.textContent=HOST.calendar.monthLabel;
+  }
+  const shift=(n)=>{ const d=new Date(calState.month+"-01T00:00:00"); d.setMonth(d.getMonth()+n);
+    calState.month=d.toISOString().slice(0,7); calLoad(); };
+  if($("#hdCalPrev")) $("#hdCalPrev").addEventListener("click",()=>shift(-1));
+  if($("#hdCalNext")) $("#hdCalNext").addEventListener("click",()=>shift(1));
+  if($("#hdCalProp")) $("#hdCalProp").addEventListener("change",(e)=>{ calState.property=+e.target.value; calLoad(); });
+
+  const cal=$("#hdCal");
+  if(cal) cal.addEventListener("click",(e)=>{
+    const cell=e.target.closest(".hd-cal-day"); if(!cell) return;
+    if(cell.dataset.booked==="1"){ toast("That night is booked — cancel the booking first","clock"); return; }
+    const iso=cell.dataset.day, price=+cell.dataset.price, blocked=cell.dataset.blocked==="1";
+    openModal(`<h2 style="margin-bottom:4px">${iso}</h2>
+      <p class="small" style="margin-bottom:14px">Set the nightly rate for this date, or block it.</p>
+      <div class="frm-row"><label>Nightly rate (₦)</label><input class="inp" type="number" id="hdDayPrice" value="${price}" step="5000" min="0"></div>
+      <label class="chk" style="margin-bottom:12px"><input type="checkbox" id="hdDayBlock"${blocked?" checked":""}> Block this date</label>
+      <div class="btnrow"><button class="btn btn-gold" id="hdDaySave">Save</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button></div>`);
+    const save=$("#hdDaySave");
+    if(save) save.addEventListener("click",async ()=>{
+      save.disabled=true;
+      const r=await api("host-action.php",{action:"set-day",property:calState.property,day:iso,
+        price:+($("#hdDayPrice").value||0),blocked:$("#hdDayBlock").checked});
+      save.disabled=false;
+      if(!r.ok){ toast(r.message||"Could not save","x"); return; }
+      HOST.calendar=r.data.calendar;
+      const grid=$("#hdCal"); if(grid) grid.innerHTML=hdCalCells(HOST.calendar);
+      closeModal(); toast(r.message||"Saved","check");
+    });
+  });
+
+  if($("#hdBulk")) $("#hdBulk").addEventListener("click",()=>{
+    const first=calState.month+"-01";
+    openModal(`<h2 style="margin-bottom:4px">Bulk price edit</h2>
+      <p class="small" style="margin-bottom:14px">Apply one nightly rate across a date range.</p>
+      <div class="frm-row"><label>From</label><input class="inp" type="date" id="hdBkFrom" value="${first}"></div>
+      <div class="frm-row"><label>To</label><input class="inp" type="date" id="hdBkTo" value="${first}"></div>
+      <div class="frm-row"><label>Nightly rate (₦)</label><input class="inp" type="number" id="hdBkPrice" step="5000" min="1000" placeholder="150000"></div>
+      <div class="btnrow"><button class="btn btn-gold" id="hdBkSave">Apply</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button></div>`);
+    const save=$("#hdBkSave");
+    if(save) save.addEventListener("click",async ()=>{
+      save.disabled=true;
+      const r=await api("host-action.php",{action:"bulk-price",property:calState.property,
+        from:$("#hdBkFrom").value,to:$("#hdBkTo").value,price:+($("#hdBkPrice").value||0)});
+      save.disabled=false;
+      if(!r.ok){ toast(r.message||"Could not apply","x"); return; }
+      HOST.calendar=r.data.calendar;
+      const grid=$("#hdCal"); if(grid) grid.innerHTML=hdCalCells(HOST.calendar);
+      closeModal(); toast(r.message||"Updated","check");
+    });
+  });
+
+  /* ---------------- delegated actions across the tabs ---------------- */
+  const content=$("#hdContent");
+  if(content) content.addEventListener("click",async (e)=>{
+    const reload=()=>location.reload();
+
+    const st2=e.target.closest("[data-hd-status]");
+    if(st2){ const r=await api("host-action.php",{action:"listing-status",property:+st2.dataset.hdStatus,status:st2.dataset.to});
+      toast(r.message||(r.ok?"Updated":"Could not update"),r.ok?"check":"x"); if(r.ok) reload(); return; }
+
+    const pr=e.target.closest("[data-hd-price]");
+    if(pr){
+      const id=+pr.dataset.hdPrice;
+      openModal(`<h2 style="margin-bottom:4px">${esc(pr.dataset.name||"Nightly rate")}</h2>
+        <div class="frm-row"><label>Nightly rate (₦)</label><input class="inp" type="number" id="hdLp" value="${pr.dataset.price}" step="5000" min="1000"></div>
+        <div class="btnrow"><button class="btn btn-gold" id="hdLpSave">Save</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button></div>`);
+      const b=$("#hdLpSave");
+      if(b) b.addEventListener("click",async ()=>{ b.disabled=true;
+        const r=await api("host-action.php",{action:"listing-price",property:id,price:+($("#hdLp").value||0)});
+        b.disabled=false; toast(r.message||(r.ok?"Saved":"Could not save"),r.ok?"check":"x");
+        if(r.ok){ closeModal(); reload(); } });
+      return;
+    }
+
+    const rt=e.target.closest("[data-rule-toggle]");
+    if(rt){ const r=await api("host-action.php",{action:"rule-toggle",id:+rt.dataset.ruleToggle});
+      toast(r.message||(r.ok?"Updated":"Could not update"),r.ok?"check":"x"); if(r.ok) reload(); return; }
+
+    const rd=e.target.closest("[data-rule-del]");
+    if(rd){ const r=await api("host-action.php",{action:"rule-delete",id:+rd.dataset.ruleDel});
+      toast(r.message||(r.ok?"Removed":"Could not remove"),r.ok?"check":"x"); if(r.ok) reload(); return; }
+
+    const tv=e.target.closest("[data-team-revoke]");
+    if(tv){ const r=await api("host-action.php",{action:"team-revoke",id:+tv.dataset.teamRevoke});
+      toast(r.message||(r.ok?"Revoked":"Could not revoke"),r.ok?"check":"x"); if(r.ok) reload(); return; }
+
+    const td=e.target.closest("[data-tpl-del]");
+    if(td){ const r=await api("host-action.php",{action:"template-delete",id:+td.dataset.tplDel});
+      toast(r.message||(r.ok?"Removed":"Could not remove"),r.ok?"check":"x"); if(r.ok) reload(); return; }
+
+    const te=e.target.closest("[data-tpl-edit]");
+    if(te){ hdTemplateModal(+te.dataset.tplEdit); return; }
+
+    const ch=e.target.closest("[data-channel]");
+    if(ch){ const r=await api("host-action.php",{action:"channel-toggle",id:+ch.dataset.channel});
+      toast(r.message||(r.ok?"Updated":"Could not update"),r.ok?"check":"x"); if(r.ok) reload(); return; }
+
+    const ai=e.target.closest("[data-insight]");
+    if(ai){ toast("Suggestion noted — we'll keep an eye on it","spark"); return; }
+  });
+
+  if($("#hdAddRule")) $("#hdAddRule").addEventListener("click",()=>{
+    openModal(`<h2 style="margin-bottom:4px">New pricing rule</h2>
+      <div class="frm-row"><label>Name</label><input class="inp" id="hdRName" placeholder="Detty December"></div>
+      <div class="frm-row"><label>Adjustment (%)</label><input class="inp" type="number" id="hdRPct" value="15" step="1" min="-90" max="300"></div>
+      <div class="frm-row"><label>Type</label><select class="sel" id="hdRKind">
+        <option value="seasonal">Seasonal</option><option value="weekend">Weekend</option>
+        <option value="lastminute">Last minute</option><option value="length">Length of stay</option><option value="custom">Custom</option>
+      </select></div>
+      <div class="frm-row"><label>Starts <span class="small">(optional)</span></label><input class="inp" type="date" id="hdRFrom"></div>
+      <div class="frm-row"><label>Ends <span class="small">(optional)</span></label><input class="inp" type="date" id="hdRTo"></div>
+      <div class="btnrow"><button class="btn btn-gold" id="hdRSave">Add rule</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button></div>`);
+    const b=$("#hdRSave");
+    if(b) b.addEventListener("click",async ()=>{ b.disabled=true;
+      const r=await api("host-action.php",{action:"rule-add",name:$("#hdRName").value,
+        adjust:+($("#hdRPct").value||0),kind:$("#hdRKind").value,starts:$("#hdRFrom").value,ends:$("#hdRTo").value});
+      b.disabled=false; toast(r.message||(r.ok?"Added":"Could not add"),r.ok?"check":"x");
+      if(r.ok){ closeModal(); location.reload(); } });
+  });
+
+  if($("#hdInvite")) $("#hdInvite").addEventListener("click",()=>{
+    openModal(`<h2 style="margin-bottom:4px">Invite a co-host</h2>
+      <div class="frm-row"><label>Name</label><input class="inp" id="hdTName" placeholder="Kemi Adeyemi"></div>
+      <div class="frm-row"><label>Email</label><input class="inp" type="email" id="hdTEmail" placeholder="kemi@example.com"></div>
+      <div class="frm-row"><label>Role</label><select class="sel" id="hdTRole">
+        <option value="cohost">Co-host</option><option value="manager">Property manager</option><option value="assistant">Assistant</option>
+      </select></div>
+      <div class="frm-row"><label>Permissions</label><select class="sel" id="hdTPerm">
+        <option value="calendar,messages">Calendar &amp; messages</option>
+        <option value="calendar,messages,bookings">Calendar, messages &amp; bookings</option>
+        <option value="messages">Messages only</option>
+      </select></div>
+      <div class="btnrow"><button class="btn btn-gold" id="hdTSave">Send invitation</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button></div>`);
+    const b=$("#hdTSave");
+    if(b) b.addEventListener("click",async ()=>{ b.disabled=true;
+      const r=await api("host-action.php",{action:"team-invite",name:$("#hdTName").value,email:$("#hdTEmail").value,
+        role:$("#hdTRole").value,permissions:$("#hdTPerm").value});
+      b.disabled=false; toast(r.message||(r.ok?"Invited":"Could not invite"),r.ok?"check":"x");
+      if(r.ok){ closeModal(); location.reload(); } });
+  });
+
+  if($("#hdNewTpl")) $("#hdNewTpl").addEventListener("click",()=>hdTemplateModal(0));
+
+  if($("#hdPayoutEdit")) $("#hdPayoutEdit").addEventListener("click",()=>{
+    const s=HOST.payoutSettings||{};
+    openModal(`<h2 style="margin-bottom:4px">Payout settings</h2>
+      <div class="frm-row"><label>Schedule</label><select class="sel" id="hdPSch">
+        ${["daily","weekly","monthly"].map(x=>`<option value="${x}"${s.schedule===x?" selected":""}>${cap(x)}</option>`).join("")}
+      </select></div>
+      <div class="frm-row"><label>Bank</label><input class="inp" id="hdPBank" value="${esc(s.bank||"")}" placeholder="Zenith Bank"></div>
+      <div class="frm-row"><label>Account name</label><input class="inp" id="hdPName" value="${esc(s.accountName||"")}" placeholder="Adebayo Ogunlesi"></div>
+      <div class="frm-row"><label>Account number</label><input class="inp" id="hdPAcct" placeholder="0123456789"></div>
+      <div class="btnrow"><button class="btn btn-gold" id="hdPSave">Save</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button></div>`);
+    const b=$("#hdPSave");
+    if(b) b.addEventListener("click",async ()=>{ b.disabled=true;
+      const r=await api("host-action.php",{action:"payout-settings",schedule:$("#hdPSch").value,
+        bank:$("#hdPBank").value,account_name:$("#hdPName").value,account:$("#hdPAcct").value});
+      b.disabled=false; toast(r.message||(r.ok?"Saved":"Could not save"),r.ok?"check":"x");
+      if(r.ok){ closeModal(); location.reload(); } });
+  });
 }
+
+function hdTemplateModal(id){
+  const t=(HOST.templates||[]).find(x=>x.id===id)||{id:0,title:"",body:"",trigger:"manual"};
+  openModal(`<h2 style="margin-bottom:4px">${t.id?"Edit template":"New template"}</h2>
+    <div class="frm-row"><label>Title</label><input class="inp" id="hdTplTitle" value="${esc(t.title)}" placeholder="Check-in instructions"></div>
+    <div class="frm-row"><label>Message</label><textarea class="txa" id="hdTplBody" rows="4" placeholder="Hi {name}, ...">${esc(t.body)}</textarea></div>
+    <div class="frm-row"><label>Send automatically</label><select class="sel" id="hdTplTrig">
+      ${[["manual","Manually"],["confirmed","When a booking is confirmed"],["checkin","On check-in day"],["checkout","On check-out day"]]
+        .map(([v,l])=>`<option value="${v}"${t.trigger===v?" selected":""}>${l}</option>`).join("")}
+    </select></div>
+    <p class="small" style="margin-bottom:12px">Placeholders: {name}, {property}, {dates}, {code}</p>
+    <div class="btnrow"><button class="btn btn-gold" id="hdTplSave">Save</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button></div>`);
+  const b=$("#hdTplSave");
+  if(b) b.addEventListener("click",async ()=>{ b.disabled=true;
+    const r=await api("host-action.php",{action:"template-save",id:t.id,title:$("#hdTplTitle").value,
+      body:$("#hdTplBody").value,trigger:$("#hdTplTrig").value});
+    b.disabled=false; toast(r.message||(r.ok?"Saved":"Could not save"),r.ok?"check":"x");
+    if(r.ok){ closeModal(); location.reload(); } });
+}
+
+/* -------------------------------------------------------- AI tools */
 function hdAI(){
+  const ins=HOST.insights||[];
+  const st=hdStat();
   return `
-  <div class="grid-2">
-    <div class="panel"><h3 style="font-size:18px">${I.spark} AI listing optimizer</h3>
-      <div class="krow"><span class="k">Title keyword: “lagoon view”</span><span class="v" style="color:var(--ok)">add → +30% views</span></div>
-      <div class="krow"><span class="k">Photo order (24 photos)</span><span class="v">3 re-ordered</span></div>
-      <div class="krow"><span class="k">Description tone</span><span class="v">Luxury · English + French</span></div>
-      <div class="krow"><span class="k">A/B test running</span><span class="v">Titles “v2” vs “v1” · day 5 of 14</span></div>
-      <button class="btn btn-green btn-sm" style="margin-top:10px" onclick="toast('AI optimiser applied to live listing ✨','spark')">Apply all suggestions</button>
+  <div class="panel"><h3 style="font-size:18px">${I.spark} Suggestions for your listings</h3>
+    <p class="small" style="margin-bottom:10px">Generated from your own occupancy, pricing and review data.</p>
+    ${ins.length?ins.map(i=>`
+    <div class="krow"><span class="k"><b>${esc(i.title)}</b><div class="sub">${esc(i.detail)}</div></span>
+      <span class="v"><span class="pill-status ${i.level}">${i.level==="ok"?"opportunity":i.level==="warn"?"needs attention":"info"}</span>
+      ${i.id?`<div class="btnrow" style="margin-top:6px"><button class="btn btn-ghost btn-sm" data-insight="${i.id}">Note</button></div>`:""}</span></div>`).join("")
+    :`<p class="small">No suggestions right now — everything looks healthy.</p>`}
+  </div>
+  <div class="grid-2" style="margin-top:18px">
+    <div class="panel"><h3 style="font-size:18px">Listing health</h3>
+      ${HOST.listings.length?HOST.listings.map(l=>{
+        const issues=[];
+        if(l.status!=="live") issues.push("not live yet");
+        if(!l.reviews) issues.push("no reviews");
+        if(l.status==="live"&&l.occupancy<40) issues.push("low occupancy");
+        return `<div class="krow"><span class="k">${esc(l.name)}</span>
+          <span class="v"><span class="pill-status ${issues.length?"warn":"ok"}">${issues.length?issues.join(" · "):"healthy"}</span></span></div>`;
+      }).join(""):`<p class="small">Add a listing to see its health here.</p>`}
     </div>
-    <div class="panel"><h3 style="font-size:18px">${I.camera} AI photo enhancement</h3>
-      <div class="krow"><span class="k">Images analysed</span><span class="v">24/24</span></div>
-      <div class="krow"><span class="k">Auto-enhanced</span><span class="v" style="color:var(--ok)">17</span></div>
-      <div class="krow"><span class="k">Low-quality flagged</span><span class="v" style="color:var(--bad)">2 (reshoot suggested)</span></div>
-      <div class="krow"><span class="k">Auto-tagged rooms</span><span class="v">24 tags</span></div>
-      <button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="toast('Photographer booked — Thursday 10am','camera')">Book photographer</button>
-    </div>
-    <div class="panel"><h3 style="font-size:18px">${I.clock} AI maintenance predictor</h3>
-      ${[["AC compressor · Unit 2","service in 6 weeks","warn"],["Water heater · Annex","healthy · next check Jan","ok"],["Smart lock battery","replace before Dec season","warn"]].map(m=>`
-      <div class="krow"><span class="k">${m[0]}</span><span class="v"><span class="pill-status ${m[2]}">${m[1]}</span></span></div>`).join("")}
-      <div class="small" style="margin-top:8px">Repairs auto-scheduled during vacancy gaps to protect occupancy.</div>
-    </div>
-    <div class="panel"><h3 style="font-size:18px">${I.shield} AI guest screening</h3>
-      <div class="krow"><span class="k">Requests screened (30 days)</span><span class="v">31</span></div>
-      <div class="krow"><span class="k">Approved instantly</span><span class="v">28</span></div>
-      <div class="krow"><span class="k">Flagged for review</span><span class="v" style="color:var(--bad)">3</span></div>
-      <div class="krow"><span class="k">Fraud blocked</span><span class="v" style="color:var(--bad)">1 (stolen card)</span></div>
-    </div>
-    <div class="panel"><h3 style="font-size:18px">${I.bot} AI automated messaging</h3>
-      <div class="small" style="margin-bottom:8px">Context-aware auto-responders, active 24/7:</div>
-      <div class="krow"><span class="k">Booking confirmations</span><span class="v" style="color:var(--ok)">Auto</span></div>
-      <div class="krow"><span class="k">Check-in instructions</span><span class="v" style="color:var(--ok)">Auto + smart code</span></div>
-      <div class="krow"><span class="k">Check-out reminders</span><span class="v" style="color:var(--ok)">Auto</span></div>
-      <div class="krow"><span class="k">Upsell suggestions</span><span class="v">Chef, transfer, housekeeping</span></div>
-    </div>
-    <div class="panel"><h3 style="font-size:18px">${I.scale} AI competitive analysis</h3>
-      <div class="krow"><span class="k">Your rate</span><span class="v">₦150,000</span></div>
-      <div class="krow"><span class="k">Comparable average</span><span class="v">₦170,000</span></div>
-      <div class="krow"><span class="k">AI verdict</span><span class="v" style="color:var(--accent)">+8% sustainable</span></div>
+    <div class="panel"><h3 style="font-size:18px">Where you stand</h3>
+      <div class="krow"><span class="k">Your average rate</span><span class="v">${st.adr?fmt(st.adr):"—"}</span></div>
+      <div class="krow"><span class="k">Your occupancy</span><span class="v">${st.occupancy||0}%</span></div>
+      <div class="krow"><span class="k">Your rating</span><span class="v">${st.rating||"—"}</span></div>
+      <div class="krow"><span class="k">Nights sold</span><span class="v">${st.nightsSold||0}</span></div>
+      <p class="small" style="margin-top:10px">Benchmarks against similar homes appear once we have enough comparable data in your area.</p>
     </div>
   </div>`;
 }
+
+/* ------------------------------------------------------------ team */
 function hdTeam(){
+  const team=HOST.team||[];
   return `<div class="panel"><h3 style="font-size:18px">Co-hosts &amp; team</h3>
     <div class="tbl-wrap" style="margin-top:10px"><table class="tbl">
-      <thead><tr><th>Member</th><th>Role</th><th>Permissions</th><th></th></tr></thead>
+      <thead><tr><th>Member</th><th>Role</th><th>Permissions</th><th>Status</th><th></th></tr></thead>
       <tbody>
-        ${[["You (owner)","Owner","All access","—"],["Kemi A.","Co-host · Kemi","Calendar, messages, bookings","manager"],["Yusuf D.","Property manager","Calendar, housekeeping, finance","manager"],["Chidi N.","Assistant","Messages only","viewer"]].map(r=>`
-        <tr><td class="strong">${r[0]}</td><td>${r[1]}</td><td class="sub">${r[2]}</td>
-        <td><div class="btnrow">${r[3]==="manager"?`<button class="btn btn-ghost btn-sm" onclick="toast('Role updated','users')">${I.edit} Edit role</button>`:""}
-        ${r[3]==="manager"||r[3]==="viewer"?`<button class="btn btn-ghost btn-sm" onclick="toast('Access revoked','lock')">Revoke</button>`:""}</div></td></tr>`).join("")}
+        <tr><td class="strong">${esc(USER?USER.name:"You")} (owner)</td><td>Owner</td><td class="sub">All access</td><td><span class="pill-status ok">active</span></td><td></td></tr>
+        ${team.map(t=>`<tr>
+          <td class="strong">${esc(t.name)}<div class="sub">${esc(t.email)}</div></td>
+          <td>${esc(cap(t.role))}</td>
+          <td class="sub">${esc(t.permissions.split(",").join(", "))}</td>
+          <td><span class="pill-status ${t.status==="active"?"ok":"info"}">${esc(t.status)}</span></td>
+          <td><div class="btnrow"><button class="btn btn-ghost btn-sm" data-team-revoke="${t.id}">Revoke</button></div></td>
+        </tr>`).join("")}
       </tbody></table></div>
-    <div class="btnrow" style="margin-top:14px"><button class="btn btn-gold btn-sm" onclick="toast('Invitation sent with role-based permissions ✨','users')">${I.plus} Invite co-host</button></div>
-    <div class="small" style="margin-top:10px">Role-based access: admin, moderator, finance, marketing, support — every action is logged in the audit trail.</div>
+    ${team.length?"":`<p class="small" style="margin-top:10px">No co-hosts yet. Invite someone to help manage your calendar and guests.</p>`}
+    <div class="btnrow" style="margin-top:14px"><button class="btn btn-gold btn-sm" id="hdInvite">${I.plus} Invite co-host</button></div>
   </div>`;
 }
+
+/* ------------------------------------------------------- templates */
 function hdTemplates(){
-  const tp=[["Booking confirmation","Hi {name}! Your reservation at {property} is confirmed 🎉 · {dates} · check-in code {code}","send"],
-    ["Check-in instructions","The smart lock opens with {code}. Wi-Fi: Jollof-5G / {password}. Car park B, spot 12.","key"],
-    ["Check-out reminder","Check-out is at 11am tomorrow. Message us for a late check-out (2pm) or housekeeping!","clock"],
-    ["5-star ask","We'd love a review — it takes a minute and means the world. → {link}","star"]];
-  return `<div class="panel"><h3 style="font-size:18px">Automated message templates</h3>
-    <div class="small" style="margin-bottom:12px">Sent automatically based on booking status — edits apply instantly.</div>
-    ${tp.map(t=>`<div class="panel" style="margin-bottom:10px;background:var(--card-2)">
-      <div class="krow" style="border:none;padding:8px 0"><span class="k"><b>${t[0]}</b></span><span class="v">${I[t[2]]||I.send} active</span></div>
-      <p class="small">${t[1]}</p>
-      <button class="btn btn-ghost btn-sm" onclick="toast('Template editor opened','edit')">${I.edit} Edit</button>
-    </div>`).join("")}
-    <button class="btn btn-green btn-sm" onclick="toast('New template created from draft','plus')">${I.plus} New template</button>
+  const tp=HOST.templates||[];
+  const trig={manual:"Sent manually",confirmed:"On booking confirmed",checkin:"On check-in day",checkout:"On check-out day"};
+  return `<div class="panel"><h3 style="font-size:18px">Message templates</h3>
+    <div class="small" style="margin-bottom:12px">Reusable replies for your guests.</div>
+    ${tp.length?tp.map(t=>`<div class="panel" style="margin-bottom:10px;background:var(--card-2)">
+      <div class="krow" style="border:none;padding:8px 0"><span class="k"><b>${esc(t.title)}</b></span>
+        <span class="v">${I[t.icon]||I.send} ${esc(trig[t.trigger]||t.trigger)}</span></div>
+      <p class="small">${esc(t.body)}</p>
+      <div class="btnrow"><button class="btn btn-ghost btn-sm" data-tpl-edit="${t.id}">${I.edit} Edit</button>
+      <button class="btn btn-ghost btn-sm" data-tpl-del="${t.id}">Remove</button></div>
+    </div>`).join(""):`<p class="small">No templates yet.</p>`}
+    <button class="btn btn-green btn-sm" id="hdNewTpl">${I.plus} New template</button>
   </div>`;
 }
+
+/* -------------------------------------------------------- channels */
 function hdChannels(){
+  const ch=HOST.channels||[];
   return `<div class="grid-2">
-    <div class="panel"><h3 style="font-size:18px">Channel manager — availability sync</h3>
-      ${[["Airbnb","Connected","ok","last sync 4 min ago"],["Booking.com","Connected","ok","last sync 6 min ago"],["VRBO / Expedia","Connected","ok","last sync 12 min ago"],["Direct (jollofliving.com)","Live","ok","always"]].map(c=>`
-      <div class="krow"><span class="k">${c[0]}</span><span class="v"><span class="pill-status ${c[2]}">${c[1]}</span><div class="sub">${c[3]}</div></span></div>`).join("")}
-      <div class="small" style="margin-top:8px">Two-way sync — a booking on any channel instantly blocks your calendar everywhere. No double-bookings, ever.</div>
+    <div class="panel"><h3 style="font-size:18px">Channel manager</h3>
+      ${ch.length?ch.map(c=>`
+      <div class="krow"><span class="k">${esc(c.channel)}<div class="sub">${c.lastSync?"last sync "+esc(c.lastSync):esc(c.note||"not connected")}</div></span>
+        <span class="v"><span class="pill-status ${c.status==="connected"?"ok":"info"}">${esc(c.status)}</span>
+        ${c.channel==="Direct"?"":`<div class="btnrow" style="margin-top:6px"><button class="btn btn-ghost btn-sm" data-channel="${c.id}">${c.status==="connected"?"Disconnect":"Connect"}</button></div>`}</span></div>`).join("")
+      :`<p class="small">No channels configured.</p>`}
+      <div class="small" style="margin-top:8px">Connecting a channel keeps your availability in sync so the same night can never be sold twice.</div>
     </div>
-    <div class="stack">
-      <div class="panel"><h3 style="font-size:18px">Smart integrations</h3>
-        <div class="krow"><span class="k">Smart locks (August · Yale · Nuki)</span><span class="v" style="color:var(--ok)">connected</span></div>
-        <div class="krow"><span class="k">Smart home (lights, AC, thermostat)</span><span class="v" style="color:var(--ok)">connected</span></div>
-        <div class="krow"><span class="k">Accounting (QuickBooks, Xero)</span><span class="v" style="color:var(--ok)">connected</span></div>
-        <div class="krow"><span class="k">CRM (HubSpot)</span><span class="v"><button class="btn btn-ghost btn-sm" onclick="toast('CRM connection started','globe')">Connect</button></span></div>
-        <div class="krow"><span class="k">Analytics (GA4, Mixpanel)</span><span class="v" style="color:var(--ok)">connected</span></div>
-      </div>
-      <div class="panel"><h3 style="font-size:18px">Automated access codes</h3>
-        <p class="small">Codes generate per booking, expire at checkout, and rotate for every stay. Audited and timestamped.</p>
-        <div class="krow"><span class="k">Next booking</span><span class="v">4471# · Sep 6</span></div>
-      </div>
+    <div class="panel"><h3 style="font-size:18px">Direct bookings</h3>
+      <div class="krow"><span class="k">Your listings on Jollof Living</span><span class="v">${(hdStat().listingsLive)||0} live</span></div>
+      <div class="krow"><span class="k">Commission</span><span class="v">${Math.round((hdStat().takeRate||0.12)*100)}%</span></div>
+      <div class="krow"><span class="k">Bookings received</span><span class="v">${hdStat().bookings||0}</span></div>
+      <p class="small" style="margin-top:10px">Direct bookings through Jollof Living always carry your lowest commission.</p>
     </div>
   </div>`;
 }
+
+/* --------------------------------------------------------- payouts */
 function hdPayouts(){
+  const st=hdStat();
+  const ps=HOST.payoutSettings||{};
+  const po=HOST.payouts||[];
   return `<div class="grid-3">
-    ${[["Available balance","₦2,574,000","next payout Fri"],["Last payout","₦3,890,000","Aug 30 · Zenith 0123"],["Total earned (YTD)","₦38.4m","all listings"]].map(k=>`
-    <div class="stat-kpi"><div class="lbl">${k[1]}</div><div class="val" style="font-size:24px">${k[0]}</div><div class="small">${k[2]}</div></div>`).join("")}
+    ${[["Available balance",st.available>0?fmt(st.available):fmt(0),"released from escrow"],
+       ["Held in escrow",st.escrowHeld?fmt(st.escrowHeld):fmt(0),"releases after check-in"],
+       ["Net earned",st.net?fmt(st.net):fmt(0),"after platform fee"]].map(k=>`
+    <div class="stat-kpi"><div class="lbl">${k[0]}</div><div class="val" style="font-size:22px">${k[1]}</div><div class="small">${k[2]}</div></div>`).join("")}
   </div>
   <div class="grid-2" style="margin-top:18px">
     <div class="panel"><h3 style="font-size:18px">Payout settings</h3>
-      <div class="krow"><span class="k">Schedule</span><span class="v">Weekly · Mondays</span></div>
-      <div class="krow"><span class="k">Method</span><span class="v">Bank transfer · Zenith 0123-4567</span></div>
-      <div class="krow"><span class="k">WHT (withholding tax)</span><span class="v">Auto-computed &amp; remitted</span></div>
+      <div class="krow"><span class="k">Schedule</span><span class="v">${esc(cap(ps.schedule||"weekly"))}</span></div>
+      <div class="krow"><span class="k">Bank</span><span class="v">${ps.bank?esc(ps.bank)+(ps.accountLast?" ····"+esc(ps.accountLast):""):"Not set"}</span></div>
+      <div class="krow"><span class="k">Account name</span><span class="v">${ps.accountName?esc(ps.accountName):"Not set"}</span></div>
       <div class="krow"><span class="k">Escrow release</span><span class="v">After guest check-in</span></div>
-      <button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="toast('Payout settings — update confirmed','wallet')">${I.edit} Update</button>
+      <button class="btn btn-ghost btn-sm" style="margin-top:10px" id="hdPayoutEdit">${I.edit} Update</button>
+      ${ps.bank?"":`<div class="ai-callout" style="margin-top:12px">${I.wallet}<span>Add your bank details so we can pay you.</span></div>`}
     </div>
-    <div class="panel"><h3 style="font-size:18px">Recent payouts &amp; escrow</h3>
-      <div class="tbl-wrap"><table class="tbl"><tbody>
-        ${[["PO-88731","Aug 30 · 4 bookings","₦3,890,000","Paid","ok"],["PO-88730","Aug 23 · 3 bookings","₦2,740,000","Paid","ok"],["ESC-4412","Villa Azur · Sep 14–Oct 12","₦4,100,000","Held in escrow","info"]].map(r=>`
-        <tr><td class="strong">${r[0]}</td><td class="sub">${r[1]}</td><td>${r[2]}</td><td><span class="pill-status ${r[4]}">${r[3]}</span></td>
-        <td><a class="btn btn-ghost btn-sm" href="${JL.apiBase}host-report.php?r=payouts">${I.download}</a></td></tr>`).join("")}
-      </tbody></table></div>
+    <div class="panel"><h3 style="font-size:18px">Recent payouts</h3>
+      ${po.length?`<div class="tbl-wrap"><table class="tbl"><tbody>
+        ${po.map(p=>`<tr><td class="strong">${esc(p.ref)}</td><td class="sub">${esc(p.date)}${p.bank?" · "+esc(p.bank):""}</td>
+        <td>${fmt(p.amount)}</td><td><span class="pill-status ${p.status==="paid"?"ok":"info"}">${esc(p.status)}</span></td></tr>`).join("")}
+      </tbody></table></div>`:`<p class="small">No payouts yet. Your first payout is sent once a guest checks in and escrow releases.</p>`}
+      <div class="btnrow" style="margin-top:12px"><a class="btn btn-ghost btn-sm" href="${JL.apiBase}host-report.php?r=payouts">${I.download} Statement</a></div>
     </div>
   </div>`;
 }

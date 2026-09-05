@@ -82,6 +82,12 @@ Jollof Club tiers and points, gift cards, referrals.
 
 Host — listing wizard, dashboard, calendar, earnings and payouts.
 
+Accounts — visitors sign up as a **customer** (books stays) or a **property
+owner** (also gets the owner dashboard: listings, calendar and pricing, real
+earnings, co-hosts, templates, channels and payouts). Owners keep every
+customer feature, and a customer can switch on hosting at any time from
+`/host`. See DEPLOYMENT.md for the roles and the one-off migration.
+
 Admin — dashboard with live GMV and charts, listing moderation, user management,
 promotions, fraud queue, CMS blocks, CSV reports, roles, audit log.
 
@@ -95,8 +101,22 @@ node tools/build_php.mjs     # src_php/*.js  -> public_html/assets/js/site.js
 node tools/gen_pages.mjs     # regenerate the thin page controllers
 node tools/gen_seed.mjs      # regenerate database/seed.sql
 ./tools/pack.sh              # build jollofliving-hostgator.zip for cPanel upload
-python3 test.py              # Playwright E2E (needs: pip install playwright)
 ```
+
+### Tests
+
+The suites drive the real pages in jsdom against a running server: they click
+real buttons, submit real forms and assert the database actually changed.
+Start a server first, then:
+
+```bash
+node tools/e2e/flows.mjs          # 22 checks: auth, booking, reviews, admin, ...
+node tools/e2e/seed-owner.mjs     # optional: give the demo host a known password
+node tools/e2e/owner.mjs          # 25 checks: customer vs owner accounts
+```
+
+Both exit non-zero on failure. `tools/e2e/harness.mjs` is the shared harness
+(`mount`, `login`, `ok`).
 
 ## Deployment
 

@@ -1034,3 +1034,29 @@ p svg,.small svg,.muted svg{width:14px;height:14px;flex:0 0 auto;vertical-align:
 #view .panel{min-width:0}
 /* membership: referral code row must wrap on very small screens */
 #view .panel>div[style*="display:flex"][style*="gap:8px"]{flex-wrap:wrap}
+
+/* ---------------------------------------------- account type chooser (signup) */
+.acct-pick{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:520px){.acct-pick{grid-template-columns:1fr}}
+.acct-opt{position:relative;display:flex;flex-direction:column;gap:3px;padding:12px 13px;
+  border:1px solid var(--line);border-radius:12px;cursor:pointer;background:var(--card);
+  transition:border-color .15s ease,background .15s ease,box-shadow .15s ease}
+.acct-opt:hover{border-color:var(--accent)}
+.acct-opt input{position:absolute;opacity:0;pointer-events:none}
+.acct-opt.active{border-color:var(--accent);background:var(--gold-soft);box-shadow:0 0 0 1px var(--accent) inset}
+.acct-opt .acct-t{font-weight:600;font-size:14px}
+.acct-opt .acct-d{font-size:11.5px;line-height:1.45;color:var(--muted)}
+.acct-opt:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ------------------------------------------------------- owner dashboard bits */
+.hd-empty{text-align:center;padding:40px 20px}
+.hd-empty .hd-emoji{font-size:34px;display:block;margin-bottom:10px}
+.hd-cal-day{border:1px solid var(--line-soft);border-radius:10px;padding:8px 4px;text-align:center;
+  cursor:pointer;transition:border-color .12s ease,background .12s ease}
+.hd-cal-day:hover{border-color:var(--accent)}
+.hd-cal-day.is-weekend{border-color:var(--accent);background:var(--gold-soft)}
+.hd-cal-day.is-booked{background:var(--card-2);cursor:not-allowed;opacity:.75}
+.hd-cal-day.is-blocked{background:repeating-linear-gradient(45deg,var(--card-2),var(--card-2) 4px,transparent 4px,transparent 8px)}
+.hd-cal-day .d{font-size:13px}
+.hd-cal-day .p{font-size:10px;color:var(--accent);white-space:nowrap}
+.hd-cal-day .s{font-size:9px}

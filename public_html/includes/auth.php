@@ -172,7 +172,7 @@ final class Auth
     /**
      * Register a new guest. Returns [ok, message, userId].
      */
-    public static function register(string $name, string $email, string $password, string $phone = ''): array
+    public static function register(string $name, string $email, string $password, string $phone = '', string $accountType = 'guest'): array
     {
         $name = trim($name);
         $email = strtolower(trim($email));
@@ -188,12 +188,17 @@ final class Auth
         if (DB::value('SELECT id FROM users WHERE email = ?', [$email])) {
             return [false, 'An account with that email already exists.', 0];
         }
+        // Only these two types may be chosen at signup; 'admin' and
+        // 'corporate' are assigned internally and can never be self-granted.
+        $isOwner = $accountType === 'host';
+
         $id = DB::insert('users', [
             'name'          => $name,
             'email'         => $email,
             'phone'         => $phone ?: null,
             'password_hash' => password_hash($password, PASSWORD_DEFAULT),
-            'role'          => 'guest',
+            'role'          => $isOwner ? 'host' : 'guest',
+            'is_host'       => $isOwner ? 1 : 0,
             'tier'          => 'bronze',
             'points'        => 0,
             'status'        => 'Pending ID',
@@ -201,7 +206,10 @@ final class Auth
             'referral_code' => strtoupper(preg_replace('~[^A-Za-z]~', '', $name) ?: 'JOLLOF') . random_int(10, 99),
         ]);
         DB::insert('wishlists', ['user_id' => $id, 'slug' => 'default', 'name' => 'My wishlist']);
-        audit($email, 'New account created', 'ok');
+        if ($isOwner) {
+            self::provisionHost((int) $id);
+        }
+        audit($email, $isOwner ? 'New owner account created' : 'New account created', 'ok');
         return [true, 'Welcome to Jollof Living.', $id];
     }
 
@@ -250,6 +258,90 @@ final class Auth
             0
         );
         return $n >= $max;
+    }
+
+    /* ------------------------------------------------------ owner/host */
+
+    /**
+     * Is the signed-in member a property owner? Admins are deliberately
+     * included so support staff can inspect the owner workspace.
+     */
+    public static function isHost(): bool
+    {
+        $u = self::user();
+        if ($u === null) {
+            return false;
+        }
+        return (int) ($u['is_host'] ?? 0) === 1
+            || ($u['role'] ?? '') === 'host'
+            || ($u['role'] ?? '') === 'admin';
+    }
+
+    /** Gate an owner-only page. */
+    public static function requireHost(): void
+    {
+        self::requireLogin();
+        if (!self::isHost()) {
+            // A signed-in customer is not an error: send them to the page that
+            // explains hosting and offers the upgrade.
+            redirect('host.php?upgrade=1');
+        }
+    }
+
+    /**
+     * Give an owner account the rows its dashboard expects. Idempotent, so an
+     * existing customer upgrading to an owner gets the same starting point as
+     * a brand-new owner without ever duplicating rows.
+     */
+    public static function provisionHost(int $userId): void
+    {
+        DB::run(
+            'UPDATE users SET role = CASE WHEN role = ? THEN ? ELSE role END, is_host = 1 WHERE id = ?',
+            ['guest', 'host', $userId]
+        );
+
+        if (!DB::value('SELECT host_id FROM host_payout_settings WHERE host_id = ?', [$userId])) {
+            DB::insert('host_payout_settings', [
+                'host_id'  => $userId,
+                'schedule' => 'weekly',
+            ]);
+        }
+
+        foreach (['Airbnb', 'Booking.com', 'VRBO / Expedia'] as $channel) {
+            if (!DB::value('SELECT id FROM host_channels WHERE host_id = ? AND channel = ?', [$userId, $channel])) {
+                DB::insert('host_channels', [
+                    'host_id' => $userId,
+                    'channel' => $channel,
+                    'status'  => 'disconnected',
+                ]);
+            }
+        }
+        if (!DB::value('SELECT id FROM host_channels WHERE host_id = ? AND channel = ?', [$userId, 'Direct'])) {
+            DB::insert('host_channels', [
+                'host_id'      => $userId,
+                'channel'      => 'Direct',
+                'status'       => 'connected',
+                'last_sync_at' => date('Y-m-d H:i:s'),
+                'note'         => 'Always in sync',
+            ]);
+        }
+
+        if (!DB::value('SELECT id FROM host_templates WHERE host_id = ?', [$userId])) {
+            $starter = [
+                ['Booking confirmation', 'Hi {name}! Your reservation at {property} is confirmed. {dates}. We cannot wait to host you.', 'confirmed', 'send'],
+                ['Check-in instructions', 'Welcome! The smart lock opens with {code}. Wi-Fi details and parking are in your trip notes.', 'checkin', 'key'],
+                ['Check-out reminder', 'Check-out is at 11am tomorrow. Message us if you would like a late check-out.', 'checkout', 'clock'],
+            ];
+            foreach ($starter as [$title, $body, $trigger, $icon]) {
+                DB::insert('host_templates', [
+                    'host_id'    => $userId,
+                    'title'      => $title,
+                    'body'       => $body,
+                    'trigger_on' => $trigger,
+                    'icon'       => $icon,
+                ]);
+            }
+        }
     }
 
     /* ----------------------------------------------------------- admin */

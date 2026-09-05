@@ -7,7 +7,7 @@ declare(strict_types=1);
 require __DIR__ . '/includes/bootstrap.php';
 require JL_INC . '/view.php';
 
-Auth::requireLogin();
+Auth::requireHost();
 
 View::header('host-dashboard');
 View::footer();

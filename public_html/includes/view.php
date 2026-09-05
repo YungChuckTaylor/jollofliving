@@ -85,6 +85,12 @@ final class View
             $data['adminStats'] = Repo::adminStats();
         }
 
+        // The owner workspace is heavy, so only build it for owners on the
+        // pages that actually render it.
+        if ($uid !== null && Auth::isHost() && in_array($page, ['host-dashboard', 'host', 'payments'], true)) {
+            $data['host'] = Repo::hostState($uid);
+        }
+
         $payload = [
             'base'    => rtrim(base_path(), '/') . '/',
             'apiBase' => rtrim(base_path(), '/') . '/api/',
@@ -103,7 +109,8 @@ final class View
                 'tier'          => $user['tier'],
                 'points'        => (int) $user['points'],
                 'role'          => $user['role'],
-                'isHost'        => (int) $user['is_host'] === 1,
+                'isHost'        => Auth::isHost(),
+                'accountType'   => Auth::isHost() ? 'owner' : 'customer',
                 'kyc'           => (int) $user['kyc_verified'] === 1,
                 'emailVerified' => ($user['status'] ?? '') === 'Verified',
                 'referral'      => $user['referral_code'],

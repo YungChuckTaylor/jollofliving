@@ -76,6 +76,8 @@ const store = {
 let currency = store.get("currency","NGN");
 const fmt = (ngn) => { const c = FX[currency]; const v = ngn*c.r; return c.s + (v>=1000 ? Math.round(v).toLocaleString("en-NG") : v.toFixed(c.d)); };
 const K = (ngn) => fmt(ngn).replace(/,000$/,"k");
+/* "pending" -> "Pending"; safe on empty/undefined input */
+const cap = (s) => { s = String(s == null ? "" : s); return s ? s[0].toUpperCase() + s.slice(1) : s; };
 
 const todayStr = (off=0) => { const d=new Date(); d.setDate(d.getDate()+off); return d.toISOString().slice(0,10); };
 

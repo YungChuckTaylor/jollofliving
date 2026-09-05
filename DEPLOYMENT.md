@@ -225,6 +225,62 @@ Instant-book listings skip `pending` and land on `confirmed`.
 
 ---
 
+## Account types: customers and property owners
+
+Visitors choose an account type when they sign up:
+
+* **Customer** (`users.role = 'guest'`) — books stays, saves wishlists, earns
+  points. Lands on `/account` after signing in.
+* **Property owner** (`users.role = 'host'`, `is_host = 1`) — everything a
+  customer can do, **plus** the owner dashboard at `/host-dashboard.php`.
+  Lands there after signing in.
+
+Owners keep full customer features, so one person can both let a property and
+book somewhere else for the weekend.
+
+Three ways to become an owner, all ending in the same place:
+
+1. Choose "List my property" at signup.
+2. Sign in as a customer, open `/host` and press **Start hosting**.
+3. Submit a listing — publishing one promotes the account automatically.
+
+Each route calls `Auth::provisionHost()`, which is idempotent: it sets the
+role, then creates the owner's payout settings, channel rows and starter
+message templates only if they are missing. Running it twice changes nothing.
+
+`admin` and `corporate` roles are assigned internally and can never be
+self-granted at signup — the API maps anything that is not `owner` to a
+customer.
+
+### Access control
+
+`Auth::requireHost()` gates `host-dashboard.php`. A signed-in customer who
+opens it is redirected to `/host?upgrade=1` (an invitation, not an error), and
+a signed-out visitor goes to the sign-in page.
+
+Every owner API action re-checks ownership against `properties.host_id` before
+reading or writing, so an owner cannot reach another owner's listings,
+calendar or money by guessing an id.
+
+### Upgrading an existing database
+
+The owner dashboard adds seven tables. **On a site that already holds real
+data, do not re-run the installer** — it is for fresh installs. Instead run the
+migration once:
+
+> cPanel → phpMyAdmin → your database → **SQL** tab → paste the contents of
+> `database/migrate-owner-accounts.sql` → **Go**
+
+It is `CREATE TABLE IF NOT EXISTS` only: it adds the new tables and never
+drops, renames or rewrites anything that already exists, so it is safe to run
+twice. The `role` and `is_host` columns it relies on already exist, so no
+`ALTER TABLE` is needed and existing accounts keep working as customers.
+
+Fresh installs need nothing extra — `database/schema.sql` already includes the
+new tables.
+
+---
+
 ## Updating the site
 
 Front-end sources live in `src_php/`. After editing them:

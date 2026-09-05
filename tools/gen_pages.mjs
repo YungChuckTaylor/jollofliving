@@ -32,7 +32,10 @@ const simple = [
 ];
 
 const authed = ['messages', 'notifications', 'trips', 'wishlist', 'compare', 'account', 'payments'];
-const hostPages = ['host-onboarding', 'host-dashboard'];
+// host-onboarding is reachable by any signed-in customer (it is how you
+// become an owner); the dashboard itself is owner-only.
+const hostPages = ['host-onboarding'];
+const ownerPages = ['host-dashboard'];
 
 const head = `<?php
 /**
@@ -70,6 +73,16 @@ View::footer();
 for (const name of hostPages) {
   write(name, head + `
 Auth::requireLogin();
+
+View::header('${name}');
+View::footer();
+`);
+}
+
+/* ---------------------------------------------------------- owner pages */
+for (const name of ownerPages) {
+  write(name, head + `
+Auth::requireHost();
 
 View::header('${name}');
 View::footer();

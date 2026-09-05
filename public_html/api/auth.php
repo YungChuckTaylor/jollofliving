@@ -19,7 +19,11 @@ if ($action === 'register') {
     if (mb_strlen($pass) < 8)        json_fail('Your password needs at least 8 characters.');
     if (!input_bool('terms'))        json_fail('Please accept the terms to continue.');
 
-    [$ok, $message, $uid] = Auth::register($name, $email, $pass, $phone);
+    // Only 'customer' and 'owner' can be chosen at signup. Anything else is
+    // ignored and treated as a customer, so 'admin' can never be self-granted.
+    $accountType = input_str('account_type') === 'owner' ? 'host' : 'guest';
+
+    [$ok, $message, $uid] = Auth::register($name, $email, $pass, $phone, $accountType);
     if (!$ok) {
         json_fail($message);
     }
@@ -31,7 +35,12 @@ if ($action === 'register') {
     Mailer::welcome($email, $name);
     audit($email, 'Account created', 'ok');
 
-    json_ok_state(['redirect' => url('account.php')], 'Welcome to Jollof Living ✨');
+    // Owners land in their workspace; customers land in their account.
+    $isOwner = $accountType === 'host';
+    json_ok_state(
+        ['redirect' => url($isOwner ? 'host-dashboard.php' : 'account.php')],
+        $isOwner ? 'Welcome to Jollof Living — your owner workspace is ready ✨' : 'Welcome to Jollof Living ✨'
+    );
 }
 
 /* ---- sign in ---- */
@@ -53,4 +62,4 @@ if (!$ok) {
 Repo::ensureConversations((int) $u['id']);
 audit($email, 'Signed in', 'ok');
 
-json_ok_state(['redirect' => url('account.php')], 'Welcome back ✨');
+json_ok_state(['redirect' => url(Auth::isHost() ? 'host-dashboard.php' : 'account.php')], 'Welcome back ✨');

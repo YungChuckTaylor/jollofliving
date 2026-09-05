@@ -899,4 +899,363 @@ final class Repo
               GROUP BY p.city ORDER BY total DESC"
         ));
     }
+
+    /* ==================================================================
+     *  Owner (host) workspace
+     *  Every query below is scoped by properties.host_id or host_id, so an
+     *  owner can only ever see their own listings, bookings and money.
+     * ================================================================== */
+
+    /** The owner's listings, newest first, with live performance figures. */
+    public static function hostListings(int $hostId): array
+    {
+        $rows = DB::all(
+            "SELECT p.*,
+                    (SELECT COUNT(*) FROM bookings b
+                      WHERE b.property_id = p.id AND b.status <> 'cancelled') AS bookings_count,
+                    (SELECT COALESCE(SUM(b.total),0) FROM bookings b
+                      WHERE b.property_id = p.id AND b.status <> 'cancelled') AS revenue,
+                    (SELECT COALESCE(SUM(b.nights),0) FROM bookings b
+                      WHERE b.property_id = p.id AND b.status IN ('confirmed','active','completed')) AS nights_sold
+               FROM properties p
+              WHERE p.host_id = ?
+              ORDER BY p.id DESC",
+            [$hostId]
+        );
+
+        $out = [];
+        foreach ($rows as $r) {
+            $nights = (int) $r['nights_sold'];
+            // Occupancy across a rolling 90-day window is the fairest
+            // comparison between a listing published today and one a year old.
+            $occ = $nights > 0 ? min(100, (int) round(($nights / 90) * 100)) : 0;
+            $out[] = [
+                'id'       => (int) $r['id'],
+                'slug'     => $r['slug'],
+                'name'     => $r['name'],
+                'area'     => $r['area'],
+                'city'     => $r['city'],
+                'img'      => $r['img'],
+                'price'    => (int) $r['price'],
+                'rating'   => (float) $r['rating'],
+                'reviews'  => (int) $r['reviews_count'],
+                'status'   => $r['status'],
+                'bookings' => (int) $r['bookings_count'],
+                'revenue'  => (int) $r['revenue'],
+                'occupancy'=> $occ,
+            ];
+        }
+        return $out;
+    }
+
+    /** Ids of every property belonging to this owner. */
+    public static function hostPropertyIds(int $hostId): array
+    {
+        return array_map(
+            static fn($r) => (int) $r['id'],
+            DB::all('SELECT id FROM properties WHERE host_id = ?', [$hostId])
+        );
+    }
+
+    /** Bookings across all of the owner's listings. */
+    public static function hostBookings(int $hostId, int $limit = 40): array
+    {
+        return DB::all(
+            "SELECT b.*, p.name AS property_name, p.slug AS property_slug
+               FROM bookings b
+               JOIN properties p ON p.id = b.property_id
+              WHERE p.host_id = ?
+              ORDER BY b.checkin DESC
+              LIMIT " . (int) $limit,
+            [$hostId]
+        );
+    }
+
+    /** Headline numbers for the owner overview — all real queries. */
+    public static function hostStats(int $hostId): array
+    {
+        $ids = self::hostPropertyIds($hostId);
+        $take = (float) self::setting('host_take_rate', 0.12);
+
+        if (!$ids) {
+            return [
+                'listings' => 0, 'listingsLive' => 0, 'listingsPending' => 0,
+                'bookings' => 0, 'bookings30' => 0, 'upcoming' => 0,
+                'nightsSold' => 0, 'occupancy' => 0, 'adr' => 0, 'revpar' => 0,
+                'gross' => 0, 'net' => 0, 'gross30' => 0,
+                'pending' => 0, 'escrowHeld' => 0, 'available' => 0,
+                'rating' => 0.0, 'reviews' => 0, 'leadTime' => 0, 'takeRate' => $take,
+            ];
+        }
+
+        $in = implode(',', array_fill(0, count($ids), '?'));
+        $since30 = date('Y-m-d H:i:s', strtotime('-30 days'));
+        $today = date('Y-m-d');
+
+        $gross = (int) DB::value("SELECT COALESCE(SUM(total),0) FROM bookings WHERE property_id IN ($in) AND status <> 'cancelled'", $ids, 0);
+        $nights = (int) DB::value("SELECT COALESCE(SUM(nights),0) FROM bookings WHERE property_id IN ($in) AND status IN ('confirmed','active','completed')", $ids, 0);
+        $sold = (int) DB::value("SELECT COUNT(*) FROM bookings WHERE property_id IN ($in) AND status <> 'cancelled'", $ids, 0);
+
+        // Occupancy = nights sold / nights offered across a 90-day window.
+        $capacity = count($ids) * 90;
+        // Booking lead time in days. SQLite (local testing) and MySQL (live)
+        // spell date arithmetic differently, so pick the right dialect.
+        $diff = DB::isSqlite()
+            ? 'JULIANDAY(checkin) - JULIANDAY(created_at)'
+            : 'DATEDIFF(checkin, created_at)';
+        $lead = (float) DB::value(
+            "SELECT COALESCE(AVG($diff),0) FROM bookings WHERE property_id IN ($in) AND status <> 'cancelled'",
+            $ids,
+            0
+        );
+
+        return [
+            'listings'        => count($ids),
+            'listingsLive'    => (int) DB::value("SELECT COUNT(*) FROM properties WHERE host_id = ? AND status = 'live'", [$hostId], 0),
+            'listingsPending' => (int) DB::value("SELECT COUNT(*) FROM properties WHERE host_id = ? AND status IN ('pending','draft')", [$hostId], 0),
+            'bookings'        => $sold,
+            'bookings30'      => (int) DB::value("SELECT COUNT(*) FROM bookings WHERE property_id IN ($in) AND created_at > ?", array_merge($ids, [$since30]), 0),
+            'upcoming'        => (int) DB::value("SELECT COUNT(*) FROM bookings WHERE property_id IN ($in) AND checkin >= ? AND status IN ('pending','confirmed')", array_merge($ids, [$today]), 0),
+            'nightsSold'      => $nights,
+            'occupancy'       => $capacity > 0 ? min(100, (int) round(($nights / $capacity) * 100)) : 0,
+            'adr'             => $nights > 0 ? (int) round($gross / $nights) : 0,
+            'revpar'          => $capacity > 0 ? (int) round($gross / $capacity) : 0,
+            'gross'           => $gross,
+            'net'             => (int) round($gross * (1 - $take)),
+            'gross30'         => (int) DB::value("SELECT COALESCE(SUM(total),0) FROM bookings WHERE property_id IN ($in) AND status <> 'cancelled' AND created_at > ?", array_merge($ids, [$since30]), 0),
+            'pending'         => (int) DB::value("SELECT COUNT(*) FROM bookings WHERE property_id IN ($in) AND status = 'pending'", $ids, 0),
+            'escrowHeld'      => (int) DB::value("SELECT COALESCE(SUM(total),0) FROM bookings WHERE property_id IN ($in) AND escrow_status = 'held' AND status IN ('confirmed','active')", $ids, 0),
+            'available'       => (int) round(((int) DB::value("SELECT COALESCE(SUM(total),0) FROM bookings WHERE property_id IN ($in) AND escrow_status = 'released'", $ids, 0)) * (1 - $take))
+                                 - (int) DB::value('SELECT COALESCE(SUM(amount),0) FROM payouts WHERE user_id = ? AND status <> ?', [$hostId, 'failed'], 0),
+            'rating'          => round((float) DB::value("SELECT COALESCE(AVG(rating),0) FROM reviews WHERE property_id IN ($in) AND status = 'published'", $ids, 0), 2),
+            'reviews'         => (int) DB::value("SELECT COUNT(*) FROM reviews WHERE property_id IN ($in) AND status = 'published'", $ids, 0),
+            'leadTime'        => (int) round($lead),
+            'takeRate'        => $take,
+        ];
+    }
+
+    /** Monthly earnings for the owner's chart (last N months). */
+    public static function hostEarningsSeries(int $hostId, int $months = 12): array
+    {
+        $ids = self::hostPropertyIds($hostId);
+        $out = [];
+        for ($i = $months - 1; $i >= 0; $i--) {
+            $start = date('Y-m-01 00:00:00', strtotime("-$i months"));
+            $end = date('Y-m-01 00:00:00', strtotime('-' . ($i - 1) . ' months'));
+            $v = 0;
+            if ($ids) {
+                $in = implode(',', array_fill(0, count($ids), '?'));
+                $v = (int) DB::value(
+                    "SELECT COALESCE(SUM(total),0) FROM bookings
+                      WHERE property_id IN ($in) AND status <> 'cancelled'
+                        AND created_at >= ? AND created_at < ?",
+                    array_merge($ids, [$start, $end]),
+                    0
+                );
+            }
+            $out[] = ['l' => date('M', strtotime($start)), 'v' => (int) round($v / 1000)];
+        }
+        return $out;
+    }
+
+    /** Where the owner's bookings come from, for the sources donut. */
+    public static function hostBookingSources(int $hostId): array
+    {
+        $ids = self::hostPropertyIds($hostId);
+        if (!$ids) {
+            return [];
+        }
+        $in = implode(',', array_fill(0, count($ids), '?'));
+        return array_map(
+            static fn($r) => ['l' => ucfirst((string) ($r['pay_method'] ?: 'direct')), 'v' => (int) $r['n']],
+            DB::all(
+                "SELECT COALESCE(pay_method,'direct') AS pay_method, COUNT(*) AS n
+                   FROM bookings WHERE property_id IN ($in) AND status <> 'cancelled'
+                  GROUP BY pay_method ORDER BY n DESC",
+                $ids
+            )
+        );
+    }
+
+    /** Calendar for one month: price + availability per day. */
+    public static function hostCalendar(int $hostId, ?int $propertyId, string $month): array
+    {
+        $ids = self::hostPropertyIds($hostId);
+        if (!$ids) {
+            return ['property' => null, 'days' => []];
+        }
+        $pid = $propertyId && in_array($propertyId, $ids, true) ? $propertyId : $ids[0];
+        $prop = self::propertyById($pid);
+
+        $start = date('Y-m-01', strtotime($month . '-01'));
+        $end = date('Y-m-t', strtotime($start));
+        $base = (int) ($prop['price'] ?? 0);
+
+        $overrides = [];
+        foreach (DB::all('SELECT * FROM property_calendar WHERE property_id = ? AND day BETWEEN ? AND ?', [$pid, $start, $end]) as $o) {
+            $overrides[$o['day']] = $o;
+        }
+
+        // A confirmed booking blocks its nights, so the owner cannot double-sell.
+        $booked = [];
+        foreach (DB::all(
+            "SELECT checkin, checkout FROM bookings
+              WHERE property_id = ? AND status IN ('pending','confirmed','active','completed')",
+            [$pid]
+        ) as $b) {
+            $cur = strtotime((string) $b['checkin']);
+            $out = strtotime((string) $b['checkout']);
+            while ($cur < $out) {
+                $booked[date('Y-m-d', $cur)] = true;
+                $cur = strtotime('+1 day', $cur);
+            }
+        }
+
+        $days = [];
+        $total = (int) date('t', strtotime($start));
+        for ($d = 1; $d <= $total; $d++) {
+            $iso = date('Y-m-d', strtotime("$start +" . ($d - 1) . " days"));
+            $ov = $overrides[$iso] ?? null;
+            $days[] = [
+                'day'     => $d,
+                'iso'     => $iso,
+                'price'   => (int) ($ov['price'] ?? $base),
+                'blocked' => ($ov['status'] ?? 'open') === 'blocked',
+                'booked'  => isset($booked[$iso]),
+                'weekend' => in_array((int) date('N', strtotime($iso)), [5, 6, 7], true),
+            ];
+        }
+
+        return [
+            'property'   => $prop ? ['id' => $pid, 'name' => $prop['name'], 'slug' => $prop['id'], 'price' => $base] : null,
+            'month'      => date('Y-m', strtotime($start)),
+            'monthLabel' => date('F Y', strtotime($start)),
+            'firstDow'   => ((int) date('N', strtotime($start))) - 1,
+            'days'       => $days,
+        ];
+    }
+
+    public static function hostPricingRules(int $hostId): array
+    {
+        return DB::all('SELECT * FROM pricing_rules WHERE host_id = ? ORDER BY id DESC', [$hostId]);
+    }
+
+    public static function hostTeam(int $hostId): array
+    {
+        return DB::all("SELECT * FROM host_team WHERE host_id = ? AND status <> 'revoked' ORDER BY id", [$hostId]);
+    }
+
+    public static function hostTemplates(int $hostId): array
+    {
+        return DB::all('SELECT * FROM host_templates WHERE host_id = ? ORDER BY id', [$hostId]);
+    }
+
+    public static function hostChannels(int $hostId): array
+    {
+        return DB::all('SELECT * FROM host_channels WHERE host_id = ? ORDER BY id', [$hostId]);
+    }
+
+    public static function hostPayoutSettings(int $hostId): array
+    {
+        return DB::row('SELECT * FROM host_payout_settings WHERE host_id = ?', [$hostId])
+            ?: ['host_id' => $hostId, 'schedule' => 'weekly', 'bank_name' => null, 'account_name' => null, 'account_last' => null];
+    }
+
+    public static function hostPayouts(int $hostId, int $limit = 12): array
+    {
+        return DB::all('SELECT * FROM payouts WHERE user_id = ? ORDER BY id DESC LIMIT ' . (int) $limit, [$hostId]);
+    }
+
+    /**
+     * Suggestions for the AI tools tab. Stored rows come first; when an owner
+     * has none yet we derive a few from their real data rather than inventing
+     * numbers, so the panel is never empty and never fictional.
+     */
+    public static function hostInsights(int $hostId): array
+    {
+        $rows = DB::all("SELECT * FROM host_insights WHERE host_id = ? AND status = 'open' ORDER BY id DESC", [$hostId]);
+        if ($rows) {
+            return array_map(static fn($r) => [
+                'title'  => $r['title'],
+                'detail' => (string) $r['detail'],
+                'level'  => $r['level'],
+                'id'     => (int) $r['id'],
+            ], $rows);
+        }
+
+        $out = [];
+        foreach (self::hostListings($hostId) as $l) {
+            if ($l['status'] !== 'live') {
+                $out[] = ['title' => $l['name'], 'detail' => 'Awaiting verification — complete it to start receiving bookings.', 'level' => 'warn', 'id' => 0];
+                continue;
+            }
+            if ($l['reviews'] === 0) {
+                $out[] = ['title' => $l['name'], 'detail' => 'No reviews yet. Ask your first guests to review — listings with reviews convert far better.', 'level' => 'info', 'id' => 0];
+            }
+            if ($l['occupancy'] < 40) {
+                $out[] = ['title' => $l['name'], 'detail' => 'Occupancy is under 40%. A small price adjustment or a wider calendar usually helps.', 'level' => 'warn', 'id' => 0];
+            } elseif ($l['occupancy'] > 85) {
+                $out[] = ['title' => $l['name'], 'detail' => 'Occupancy is above 85% — you have room to raise your nightly rate.', 'level' => 'ok', 'id' => 0];
+            }
+        }
+        if (!$out) {
+            $out[] = ['title' => 'Add your first listing', 'detail' => 'Once a listing is live, tailored suggestions appear here.', 'level' => 'info', 'id' => 0];
+        }
+        return $out;
+    }
+
+    /** Everything the owner dashboard needs, in one payload. */
+    public static function hostState(int $hostId): array
+    {
+        return [
+            'stats'     => self::hostStats($hostId),
+            'listings'  => self::hostListings($hostId),
+            'bookings'  => array_map(static fn($b) => [
+                'ref'      => $b['ref'],
+                'property' => $b['property_name'],
+                'slug'     => $b['property_slug'],
+                'guest'    => $b['guest_name'],
+                'checkin'  => $b['checkin'],
+                'checkout' => $b['checkout'],
+                'nights'   => (int) $b['nights'],
+                'total'    => (int) $b['total'],
+                'status'   => $b['status'],
+                'escrow'   => $b['escrow_status'],
+            ], self::hostBookings($hostId, 20)),
+            'earnings'  => self::hostEarningsSeries($hostId),
+            'sources'   => self::hostBookingSources($hostId),
+            'calendar'  => self::hostCalendar($hostId, null, date('Y-m')),
+            'rules'     => array_map(static fn($r) => [
+                'id' => (int) $r['id'], 'name' => $r['name'], 'kind' => $r['kind'],
+                'adjust' => (float) $r['adjust_pct'], 'active' => (int) $r['active'] === 1,
+                'starts' => $r['starts_on'], 'ends' => $r['ends_on'],
+            ], self::hostPricingRules($hostId)),
+            'team'      => array_map(static fn($t) => [
+                'id' => (int) $t['id'], 'name' => $t['name'], 'email' => (string) $t['email'],
+                'role' => $t['team_role'], 'permissions' => $t['permissions'], 'status' => $t['status'],
+            ], self::hostTeam($hostId)),
+            'templates' => array_map(static fn($t) => [
+                'id' => (int) $t['id'], 'title' => $t['title'], 'body' => $t['body'],
+                'trigger' => $t['trigger_on'], 'icon' => $t['icon'], 'active' => (int) $t['active'] === 1,
+            ], self::hostTemplates($hostId)),
+            'channels'  => array_map(static fn($c) => [
+                'id' => (int) $c['id'], 'channel' => $c['channel'], 'status' => $c['status'],
+                'lastSync' => $c['last_sync_at'] ? date('M j, H:i', strtotime((string) $c['last_sync_at'])) : null,
+                'note' => (string) $c['note'],
+            ], self::hostChannels($hostId)),
+            'payouts'   => array_map(static fn($p) => [
+                'ref' => $p['reference'], 'amount' => (int) $p['amount'], 'status' => $p['status'],
+                'bank' => (string) $p['bank'], 'date' => date('M j, Y', strtotime((string) $p['created_at'])),
+            ], self::hostPayouts($hostId)),
+            'payoutSettings' => (function (array $s) {
+                return [
+                    'schedule' => $s['schedule'],
+                    'bank' => (string) $s['bank_name'],
+                    'accountName' => (string) $s['account_name'],
+                    'accountLast' => (string) $s['account_last'],
+                ];
+            })(self::hostPayoutSettings($hostId)),
+            'insights'  => self::hostInsights($hostId),
+        ];
+    }
 }

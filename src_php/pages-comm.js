@@ -317,6 +317,9 @@ function bindAccount(){
 function pAuth(mode){
   const isIn=mode!=="register";
   const next=qp("next")||"";
+  // /auth?mode=register&type=owner preselects the owner card, so the
+  // "Create an owner account" links land on the right choice.
+  const wantOwner=qp("type")==="owner";
   return `<div style="padding:calc(var(--header-h) + 30px) 20px 70px"><div class="auth-shell">
     <div class="auth-card">
       <span class="eyebrow">${isIn?"Welcome back":"Join the inner circle"}</span>
@@ -324,6 +327,20 @@ function pAuth(mode){
       <p class="small">${isIn?"Trips, wishlists, points — all waiting.":"Email and a password — onboarding takes 90 seconds."}</p>
       <form id="authForm" novalidate autocomplete="on">
         <input type="hidden" id="authNext" value="${esc(next)}">
+        ${isIn?"":`
+        <div class="frm-row">
+          <label>I want to…</label>
+          <div class="acct-pick" id="auType" role="radiogroup" aria-label="Account type">
+            ${[["customer","Book a stay","Find and book residences, save wishlists, earn points."],
+               ["owner","List my property","Publish listings, manage bookings and get paid."]]
+              .map(([v,t,d])=>{ const on=(v==="owner")===wantOwner; return `
+              <label class="acct-opt${on?" active":""}" data-acct="${v}">
+                <input type="radio" name="account_type" value="${v}"${on?" checked":""}>
+                <span class="acct-t">${t}</span>
+                <span class="acct-d">${d}</span>
+              </label>`; }).join("")}
+          </div>
+        </div>`}
         ${isIn?"":`<div class="frm-row"><label>Full name</label><input class="inp" id="auName" name="name" placeholder="Adebayo Ogunlesi" autocomplete="name" required></div>`}
         <div class="frm-row"><label>Email</label><input class="inp" id="auEmail" name="email" type="email" placeholder="you@example.com" autocomplete="${isIn?"username":"email"}" required></div>
         ${isIn?"":`<div class="frm-row"><label>Phone <span class="small">(optional)</span></label><input class="inp" id="auPhone" name="phone" placeholder="+234 803 555 0123" autocomplete="tel"></div>`}
@@ -343,6 +360,12 @@ function pAuth(mode){
 }
 function bindAuth(){
   const f=$("#authForm"); if(!f) return;
+  const pick=$("#auType");
+  if(pick){
+    pick.addEventListener("change",()=>{
+      $$(".acct-opt",pick).forEach(o=>o.classList.toggle("active",!!o.querySelector("input").checked));
+    });
+  }
   const eye=$("#auEye");
   if(eye) eye.addEventListener("click",()=>{ const p=$("#auPass"); p.type=p.type==="password"?"text":"password"; });
   f.addEventListener("submit",async (e)=>{
@@ -366,11 +389,16 @@ function bindAuth(){
         return;
       }
       payload.terms=true;
+      const picked=f.querySelector('input[name="account_type"]:checked');
+      payload.account_type=picked?picked.value:"customer";
     }
     const r=await api("auth.php",payload);
     if(!r.ok){ btn.disabled=false; btn.textContent=label; toast(r.message||"Could not sign you in","x"); return; }
     toast(r.message||"Welcome ✨","check");
+    // The server decides where to land: owners go to their workspace,
+    // customers to their account. An explicit ?next= always wins.
     const next=$("#authNext").value;
-    setTimeout(()=>{ location.href = next || URL("/account"); },600);
+    const dest=next || (r.data&&r.data.redirect) || URL("/account");
+    setTimeout(()=>{ location.href = dest; },600);
   });
 }

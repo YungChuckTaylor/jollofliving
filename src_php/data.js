@@ -50,9 +50,17 @@ const ADMIN_STATE = BOOT.admin || {
 };
 const ADMIN_STATS = BOOT.adminStats || {};
 
+/* ---------------- owner (host) workspace ---------------- */
+const HOST = BOOT.host || {
+  stats: {}, listings: [], bookings: [], earnings: [], sources: [],
+  calendar: { days: [] }, rules: [], team: [], templates: [], channels: [],
+  payouts: [], payoutSettings: {}, insights: [],
+};
+
 /* ---------------- signed-in user ---------------- */
 const USER = JL.user || null;
 const IS_ADMIN = !!JL.isAdmin;
+const IS_OWNER = !!(USER && USER.isHost);
 const REFERRAL_CODE = (USER && USER.referral) || "JOLLOF";
 
 /* ============================================================
