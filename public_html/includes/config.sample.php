@@ -108,6 +108,19 @@ return [
         'lockout_minutes'    => 15,
     ],
 
+    // ------------------------------------------------- Android app
+    // Only used by public_html/api/mobile/. The defaults are correct for
+    // a normal Capacitor build, so most people never touch this.
+    'mobile' => [
+        // How long a phone stays signed in before it must log in again.
+        'token_days' => 90,
+        // Extra origins allowed to call the mobile API, comma separated.
+        // A packaged Android app sends "https://localhost", which is
+        // already allowed. Add entries here only if you also serve the
+        // app from a real domain, e.g. 'https://app.yourdomain.com'.
+        'origins'    => '',
+    ],
+
     // ------------------------------------------------------------ debug
     // Turn OFF on the live site.
     'debug' => false,
