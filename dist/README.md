@@ -1,6 +1,6 @@
 # Deployable builds
 
-## `jollof-update.zip` (136 KB) — updating a site you already have
+## `jollof-update.zip` (139 KB) — updating a site you already have
 
 Only the files that changed since the last upload. Extract it over your
 existing `jollof` folder in cPanel File Manager and confirm the overwrite.

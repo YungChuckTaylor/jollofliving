@@ -120,12 +120,13 @@ $("#drawer").addEventListener("click", (e) => { if (e.target.closest("a")) close
   // Owners get a direct route to their workspace.
   if (IS_OWNER) links.splice(8, 0, ["/host/dashboard", "Owner dashboard"]);
   const dl = $("#drawerLinks");
-  if (dl) dl.innerHTML = links.map(([h, l]) => `<a href="${URL(h)}">${l}</a>`).join("");
+  if (dl && !dl.children.length) dl.innerHTML = links.map(([h, l]) => `<a href="${URL(h)}">${l}</a>`).join("");
 
   // Signing out only makes sense when signed in, and offering "Sign in" to
-  // someone who already is was the bug users reported.
+  // someone who already is was the bug users reported. view.php renders
+  // these server-side so they survive a JS failure; only fill in if empty.
   const dc = $("#drawerCtas");
-  if (dc) dc.innerHTML = USER
+  if (dc && !dc.children.length) dc.innerHTML = USER
     ? `<a class="btn btn-gold" href="${URL(IS_OWNER ? "/host/dashboard" : "/host/onboarding")}">${IS_OWNER ? "Owner dashboard" : "List your home"}</a>
        <a class="btn btn-ghost" href="${URL("/account")}">My account</a>
        <a class="btn btn-ghost" href="${JL.base}logout.php" id="drawerLogout">Log out</a>`

@@ -957,7 +957,13 @@ final class Repo
             'reviewsPend'  => (int) DB::value("SELECT COUNT(*) FROM reviews WHERE status = 'pending'", [], 0),
             'subscribers'  => (int) DB::value('SELECT COUNT(*) FROM subscribers', [], 0),
             'enquiries'    => (int) DB::value("SELECT COUNT(*) FROM enquiries WHERE status = 'new'", [], 0),
-            'moderation'   => (int) DB::value("SELECT COUNT(*) FROM moderation_queue WHERE status = 'open'", [], 0),
+            // Must match what the moderation tab actually shows, which is
+            // pending listings + pending reviews + open flags — not just the
+            // flags table, or the dashboard count contradicts the queue.
+            'moderation'   => (int) DB::value("SELECT COUNT(*) FROM properties WHERE status IN ('pending','draft')", [], 0)
+                              + (int) DB::value("SELECT COUNT(*) FROM reviews WHERE status = 'pending'", [], 0)
+                              + (int) DB::value("SELECT COUNT(*) FROM moderation_queue WHERE status = 'open'", [], 0),
+            'flagsOpen'    => (int) DB::value("SELECT COUNT(*) FROM moderation_queue WHERE status = 'open'", [], 0),
             'fraud'        => (int) DB::value("SELECT COUNT(*) FROM fraud_flags WHERE status = 'open'", [], 0),
             'avgRating'    => round((float) DB::value("SELECT COALESCE(AVG(rating),0) FROM reviews WHERE status='published'", [], 0), 2),
             'takeRate'     => (float) self::setting('host_take_rate', 0.12),

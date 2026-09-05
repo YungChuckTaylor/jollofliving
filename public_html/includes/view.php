@@ -317,8 +317,35 @@ final class View
       <img id="drawerLogo" alt="Jollof Living" style="height:52px">
       <button class="icon-btn" data-close aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
-    <div id="drawerLinks"></div>
-    <div style="margin-top:22px;display:grid;gap:10px" id="drawerCtas"></div>
+    <?php
+      // The drawer is the ONLY navigation below 1160px, where the header
+      // buttons are hidden. It is rendered here rather than left to
+      // site.js so that a JavaScript error can never strand a signed-in
+      // person with no way to log out.
+      $isHost = $user && Auth::isHost();
+      $dLinks = [
+        [url(''), 'Home'], [url('stays.php'), 'Stays'], [url('experiences.php'), 'Experiences'],
+        [url('neighborhoods.php'), 'Neighbourhoods'], [url('concierge.php'), 'AI Concierge'],
+        [url('trips.php'), 'My trips'], [url('wishlist.php'), 'Wishlist'], [url('host.php'), 'Host'],
+      ];
+      if ($isHost) { $dLinks[] = [url('host-dashboard.php'), 'Owner dashboard']; }
+      foreach ([[url('membership.php'), 'Jollof Club'], [url('reviews.php'), 'Reviews'],
+                [url('blog.php'), 'Journal'], [url('help.php'), 'Help']] as $l) { $dLinks[] = $l; }
+    ?>
+    <div id="drawerLinks">
+      <?php foreach ($dLinks as $l): ?><a href="<?= e($l[0]) ?>"><?= e($l[1]) ?></a><?php endforeach; ?>
+    </div>
+    <div style="margin-top:22px;display:grid;gap:10px" id="drawerCtas">
+      <?php if ($user): ?>
+        <a class="btn btn-gold" href="<?= e(url($isHost ? 'host-dashboard.php' : 'host-onboarding.php')) ?>"><?= $isHost ? 'Owner dashboard' : 'List your home' ?></a>
+        <a class="btn btn-ghost" href="<?= e(url('account.php')) ?>">My account</a>
+        <a class="btn btn-ghost" href="<?= e(url('logout.php')) ?>" id="drawerLogout">Log out</a>
+      <?php else: ?>
+        <a class="btn btn-gold" href="<?= e(url('host-onboarding.php')) ?>">List your home</a>
+        <a class="btn btn-ghost" href="<?= e(url('auth.php')) ?>">Sign in / Join</a>
+        <a class="btn btn-ghost" href="<?= e(url('auth.php?mode=register')) ?>">Create account</a>
+      <?php endif; ?>
+    </div>
   </aside>
 </div>
 

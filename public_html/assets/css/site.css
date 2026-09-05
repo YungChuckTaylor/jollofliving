@@ -164,7 +164,9 @@ header.scrolled .brand img{height:38px}
 @media(max-width:1160px){
   .nav-links{display:none}
   .burger{display:grid}
-  #navListBtn,#navAccountBtn{display:none}
+  /* Below this width the drawer is the navigation — it carries the same
+     account and log-out actions, so the header keeps only its icons. */
+  #navListBtn,#navAccountBtn,#navLogoutBtn{display:none}
 }
 
 /* drawer */

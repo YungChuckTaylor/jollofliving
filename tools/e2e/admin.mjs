@@ -218,6 +218,89 @@ async function adminActions(jar) {
   ok(denied?.ok === false, 'the admin API refuses a non-admin', denied?.message || '');
 }
 
+/* ------------------------------ the menu works without JavaScript ----- */
+async function drawerServerRendered() {
+  section('Menu is server-rendered (survives a JS failure)');
+  const jar = await login(BASE, ...HOST);
+  const grab = (html) => {
+    const i = html.indexOf('id="drawerCtas"');
+    return i < 0 ? '' : html.slice(i, i + 900);
+  };
+  let allOk = true; const notes = [];
+  for (const page of ['index.php', 'stays.php', 'host-dashboard.php', 'account.php']) {
+    const html = await (await fetch(`${BASE}/${page}`, { headers: { cookie: jar.join('; ') } })).text();
+    const d = grab(html);
+    if (!/logout\.php/.test(d) || /Sign in \/ Join/.test(d)) { allOk = false; notes.push(page); }
+  }
+  record('menu logout in raw HTML', allOk, notes.length ? `missing on ${notes.join(', ')}` : 'on every page');
+  ok(allOk, 'the menu carries Log out in the HTML itself, on every page', notes.join(', '));
+
+  const out = grab(await (await fetch(`${BASE}/index.php`)).text());
+  ok(/Sign in \/ Join/.test(out) && !/logout\.php/.test(out), 'and offers Sign in instead when signed out');
+
+  // owners get their dashboard link in the menu
+  const inn = grab(await (await fetch(`${BASE}/index.php`, { headers: { cookie: jar.join('; ') } })).text());
+  ok(/host-dashboard/.test(inn), 'an owner sees Owner dashboard in the menu');
+}
+
+/* ------------------------------ every admin menu item ----------------- */
+async function everyMenuItem(jar) {
+  section('Every admin menu item works');
+  const expected = [
+    ['dashboard', 'Dashboard'], ['moderation', 'Listings moderation'], ['users', 'User management'],
+    ['promotions', 'Promotions & campaigns'], ['fraud', 'Fraud detection'], ['cms', 'Content (CMS)'],
+    ['reports', 'Reports & analytics'], ['roles', 'Roles & permissions'], ['audit', 'Audit log'],
+  ];
+  const first = await mount(`${BASE}/admin.php?tab=dashboard`, { cookies: jar });
+  const navText = first.document.querySelector('.admin-nav')?.textContent || '';
+  const missing = expected.filter(([, label]) => !navText.includes(label));
+  record('all 9 menu items present', missing.length === 0, missing.map((m) => m[1]).join(', ') || 'all there');
+  ok(missing.length === 0, 'every menu item from the design is present', missing.map((m) => m[1]).join(', '));
+
+  // each tab must render its own distinctive panel, not silently fall back
+  const marker = {
+    dashboard: 'Live operations', moderation: 'Moderation queue', users: 'User management',
+    promotions: 'campaign manager', fraud: 'fraud detection', cms: 'Content management',
+    reports: 'Reporting', roles: 'Role-based access', audit: 'Audit log',
+  };
+  const wrong = [];
+  for (const [tab] of expected) {
+    const p = await mount(`${BASE}/admin.php?tab=${tab}`, { cookies: jar });
+    const body = p.document.body.textContent || '';
+    if (!body.toLowerCase().includes(marker[tab].toLowerCase())) wrong.push(tab);
+  }
+  record('each tab renders its own panel', wrong.length === 0, wrong.join(', ') || '9 distinct panels');
+  ok(wrong.length === 0, 'each tab renders its own panel rather than falling back', wrong.join(', '));
+
+  // header badges must be computed, not the old fixed sample figures
+  const head = first.document.querySelector('.head-actions')?.textContent || '';
+  record('header stats are real', !head.includes('412m'), head.replace(/\s+/g, ' ').trim());
+  ok(!head.includes('₦412m'), 'the header no longer shows a hardcoded GMV figure', head.replace(/\s+/g, ' ').trim());
+
+  // the dashboard moderation count must agree with the queue length
+  const st = adminState(first); const stats = adminStats(first);
+  record('dashboard count matches queue', stats.moderation === (st.moderation || []).length,
+    `stat ${stats.moderation} vs queue ${(st.moderation || []).length}`);
+  ok(stats.moderation === (st.moderation || []).length,
+    'the dashboard moderation count matches the queue', `${stats.moderation} vs ${(st.moderation || []).length}`);
+}
+
+async function userSearch(jar) {
+  section('User search');
+  const s = await mount(`${BASE}/admin.php?tab=users`, { cookies: jar });
+  const total = (adminState(s).users || []).length;
+  const box = s.$('#admUserSearch');
+  record('search box exists', !!box);
+  ok(!!box, 'the user list has a working search box');
+  if (!box) return;
+  box.value = 'adebayo';
+  box.dispatchEvent(new s.window.Event('input', { bubbles: true }));
+  await s.wait(60);
+  const shown = s.document.querySelectorAll('#admUserBody tr').length;
+  record('search filters', shown > 0 && shown < total, `${shown} of ${total}`);
+  ok(shown > 0 && shown < total, 'typing a name filters the table', `${shown} of ${total} rows`);
+}
+
 /* ------------------------------------------------------------- reports */
 async function reports(jar) {
   section('Report exports');
@@ -237,8 +320,11 @@ async function reports(jar) {
 /* --------------------------------------------------------------------- */
 await logoutControls();
 await ownerLogout();
+await drawerServerRendered();
 const jar = await adminTabs();
+await everyMenuItem(jar);
 await adminData(jar);
+await userSearch(jar);
 await moderationFlow();
 await reviewModeration();
 await adminActions(jar);

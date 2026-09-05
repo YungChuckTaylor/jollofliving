@@ -259,7 +259,17 @@ function pAdmin(q){
   if(!admIn()) return pAdminLogin();   // gate: back office requires sign-in
   const tab=(q&&q.tab)||"dashboard";
   const nav=[["dashboard","Dashboard","grid"],["moderation","Listings moderation","eye"],["users","User management","users"],["promotions","Promotions & campaigns","gift"],["fraud","Fraud detection","shield"],["cms","Content (CMS)","doc"],["reports","Reports & analytics","scale"],["roles","Roles & permissions","lock"],["audit","Audit log","book"]];
-  return `${pageHead([["Home",URL("/")],["Platform admin"]],"<em class='serif-i'>Back office</em>","Operate the platform — bookings, revenue, users, trust and growth in one place.","<span class='badge'>GMV this month <b>₦412m</b></span><span class='badge ok'>Take rate 12%</span><button class='btn btn-ghost btn-sm' onclick='admSignOut()'>Sign out</button>")}
+  // The header badges report real figures: GMV for the last 30 days and the
+  // take rate actually configured in settings, not fixed sample numbers.
+  const KH=ADMIN_STATS||{};
+  const gmv30=KH.gmv30||0;
+  const gmvTxt="₦"+(gmv30>=1000000?(gmv30/1000000).toFixed(1)+"m":gmv30>=1000?Math.round(gmv30/1000)+"k":String(gmv30));
+  const takePct=Math.round((KH.takeRate!=null?KH.takeRate:0.12)*100);
+  const badges=`<span class='badge'>GMV (30 days) <b>${gmvTxt}</b></span>`
+    +`<span class='badge ok'>Take rate ${takePct}%</span>`
+    +(KH.moderation?`<span class='badge warn'>${KH.moderation} awaiting moderation</span>`:"")
+    +`<button class='btn btn-ghost btn-sm' onclick='admSignOut()'>Sign out</button>`;
+  return `${pageHead([["Home",URL("/")],["Platform admin"]],"<em class='serif-i'>Back office</em>","Operate the platform — bookings, revenue, users, trust and growth in one place.",badges)}
   <div class="page-body"><div class="wrap">
     <div class="admin-shell">
       <nav class="admin-nav"><div class="sec">Admin</div>
@@ -340,26 +350,49 @@ function admPreview(slug){
   if(!slug||slug==="—"){ toast("This item has no public page yet","info"); return; }
   window.open(URL("/stay/"+slug),"_blank");
 }
-function admUsers(){
-  return `<div class="panel"><h3 style="font-size:18px">User management</h3>
-    <div style="display:flex;gap:8px;margin:12px 0"><input class="inp" placeholder="Search users…" style="max-width:280px"><button class="btn btn-ghost btn-sm">Filter</button></div>
-    <div class="tbl-wrap"><table class="tbl"><thead><tr><th>User</th><th>Role</th><th>Tier</th><th>Joined</th><th>Status</th><th></th></tr></thead><tbody>
-    ${ADMIN_STATE.users.map(u=>`<tr><td class="strong">${u[0]}</td><td class="sub">${u[1]}</td><td>${u[2]}</td><td>${u[3]}</td>
-      <td><span class="pill-status ${u[5]==="Verified"?"ok":u[5].startsWith("Flagged")||u[5].startsWith("Suspended")?"warn":"info"}">${u[5]}</span></td>
+/* User search is applied in the browser over the rows the server sent. */
+let ADM_USER_Q = "";
+function admUserRows(){
+  const q=ADM_USER_Q.trim().toLowerCase();
+  const all=ADMIN_STATE.users||[];
+  if(!q) return all;
+  return all.filter(u=>[u[0],u[1],u[2],u[5]].some(f=>String(f||"").toLowerCase().includes(q)));
+}
+function admUserBody(){
+  const rows=admUserRows();
+  if(!rows.length) return `<tr><td colspan="6" class="sub" style="text-align:center;padding:22px">${ADM_USER_Q?`No user matches “${esc(ADM_USER_Q)}”.`:"No users yet."}</td></tr>`;
+  return rows.map(u=>`<tr><td class="strong">${esc(u[0])}</td><td class="sub">${esc(u[1])}</td><td>${esc(u[2])}</td><td>${esc(u[3])}</td>
+      <td><span class="pill-status ${u[6]==="ok"?"ok":u[6]==="bad"?"warn":"info"}">${esc(u[5])}</span></td>
       <td><div class="btnrow">
       ${u[6]!=="ok"?`<button class="btn btn-ghost btn-sm" onclick="admAction('user','verify',${u[7]})">Verify</button>`:""}
       ${u[6]!=="bad"?`<button class="btn btn-ghost btn-sm" style="border-color:var(--bad);color:var(--bad)" onclick="admAction('user','suspend',${u[7]})">Suspend</button>`
                     :`<button class="btn btn-ghost btn-sm" onclick="admAction('user','restore',${u[7]})">Restore</button>`}
-      </div></td></tr>`).join("")}
-    </tbody></table></div>
+      </div></td></tr>`).join("");
+}
+function admUserSearch(v){
+  ADM_USER_Q=v||"";
+  const tb=$("#admUserBody"); if(tb) tb.innerHTML=admUserBody();
+  const c=$("#admUserCount"); if(c) c.textContent=`${admUserRows().length} of ${(ADMIN_STATE.users||[]).length}`;
+}
+function admUsers(){
+  const total=(ADMIN_STATE.users||[]).length;
+  return `<div class="panel"><h3 style="font-size:18px">User management <span class="badge" id="admUserCount">${total} of ${total}</span></h3>
+    <div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap">
+      <input class="inp" id="admUserSearch" placeholder="Search name, email, role or status…" style="max-width:320px"
+             value="${esc(ADM_USER_Q)}" oninput="admUserSearch(this.value)">
+      <button class="btn btn-ghost btn-sm" onclick="admUserSearch('')">Clear</button>
+    </div>
+    <div class="tbl-wrap"><table class="tbl"><thead><tr><th>User</th><th>Role</th><th>Tier</th><th>Joined</th><th>Status</th><th></th></tr></thead>
+    <tbody id="admUserBody">${admUserBody()}</tbody></table></div>
   </div>`;
 }
 function admPromotions(){
   return `<div class="panel"><h3 style="font-size:18px">Promo &amp; campaign manager</h3>
     <div class="tbl-wrap" style="margin-top:10px"><table class="tbl"><thead><tr><th>Campaign</th><th>Window</th><th>Status</th><th>Revenue</th><th></th></tr></thead><tbody>
-    ${ADMIN_STATE.campaigns.map(c=>`<tr><td class="strong">${esc(c[1])}<div class="sub">${esc(c[0])}</div></td><td class="sub">${esc(c[2]||"—")}</td>
+    ${(ADMIN_STATE.campaigns||[]).length?(ADMIN_STATE.campaigns).map(c=>`<tr><td class="strong">${esc(c[1])}<div class="sub">${esc(c[0])}</div></td><td class="sub">${esc(c[2]||"—")}</td>
       <td><span class="pill-status ${c[5]==="ok"?"ok":c[5]==="info"?"info":"warn"}">${esc(c[3])}</span></td><td>${esc(c[4]||"—")}</td>
-      <td><button class="btn btn-ghost btn-sm" onclick="campaignEdit(${c[6]})">${I.edit} Edit</button></td></tr>`).join("")}
+      <td><button class="btn btn-ghost btn-sm" onclick="campaignEdit(${c[6]})">${I.edit} Edit</button></td></tr>`).join("")
+      :`<tr><td colspan="5" class="sub" style="text-align:center;padding:22px">No campaigns yet — create the first one below.</td></tr>`}
     </tbody></table></div>
     <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:14px">
       <button class="btn btn-gold btn-sm" onclick="campaignEdit(0)">${I.plus} New campaign</button>
@@ -372,10 +405,11 @@ function admFraud(){
       <span class="badge warn">${ADMIN_STATE.fraud.filter(f=>+f[3]>=80).length} high risk</span><span class="badge">${ADMIN_STATE.fraud.filter(f=>+f[3]<80).length} medium</span><span class="badge ok">${ADMIN_STATE.fraud.length?"under review":"system healthy"}</span>
       <span class="small">Models: payment · listing · messaging · payout</span></div>
     <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Case</th><th>Subject</th><th>Signal</th><th>Risk</th><th></th></tr></thead><tbody>
-    ${ADMIN_STATE.fraud.map(f=>`<tr><td class="strong">${f[0]}</td><td class="sub">${f[1]}</td><td>${f[2]}</td>
+    ${(ADMIN_STATE.fraud||[]).length?(ADMIN_STATE.fraud).map(f=>`<tr><td class="strong">${esc(f[0])}</td><td class="sub">${esc(f[1])}</td><td>${esc(f[2])}</td>
       <td><span class="pill-status ${+f[3]>=80?"bad":+f[3]>=60?"warn":"info"}">${f[3]}%</span></td>
       <td><div class="btnrow"><button class="btn btn-ghost btn-sm" onclick="admAction('fraud','resolve',${f[5]})">Resolve</button>
-      <button class="btn btn-ghost btn-sm" onclick="admAction('fraud','escalate',${f[5]})">Escalate</button></div></td></tr>`).join("")}
+      <button class="btn btn-ghost btn-sm" onclick="admAction('fraud','escalate',${f[5]})">Escalate</button></div></td></tr>`).join("")
+      :`<tr><td colspan="5" class="sub" style="text-align:center;padding:22px">No open fraud flags — nothing needs attention.</td></tr>`}
     </tbody></table></div>
     <div class="ai-callout" style="margin-top:12px">${I.spark}<span><b>Note:</b> flags are raised on payment, listing, messaging and payout signals. Resolving a case writes an entry to the audit log.</span></div>
   </div>`;
@@ -383,19 +417,33 @@ function admFraud(){
 function adCMS(){
   return `<div class="panel"><h3 style="font-size:18px">Content management</h3>
     <div class="tbl-wrap" style="margin-top:10px"><table class="tbl"><thead><tr><th>Page</th><th>Status</th><th>Last edit</th><th>Editor</th><th></th></tr></thead><tbody>
-    ${ADMIN_STATE.cms.map(c=>`<tr><td class="strong">${c[0]}</td><td><span class="pill-status ${c[1]==="Live"?"ok":"warn"}">${c[1]}</span></td><td class="sub">${c[2]}</td><td class="sub">${c[3]}</td>
+    ${(ADMIN_STATE.cms||[]).length?(ADMIN_STATE.cms).map(c=>`<tr><td class="strong">${esc(c[0])}</td><td><span class="pill-status ${c[1]==="Live"?"ok":"warn"}">${esc(c[1])}</span></td><td class="sub">${esc(c[2])}</td><td class="sub">${esc(c[3])}</td>
     <td><div class="btnrow"><button class="btn btn-ghost btn-sm" onclick="cmsEdit(${c[4]})">${I.edit} Edit</button>
-    <button class="btn btn-ghost btn-sm" onclick="admAction('cms','toggle',${c[4]})">${c[1]==="Live"?"Unpublish":"Publish"}</button></div></td></tr>`).join("")}
+    <button class="btn btn-ghost btn-sm" onclick="admAction('cms','toggle',${c[4]})">${c[1]==="Live"?"Unpublish":"Publish"}</button></div></td></tr>`).join("")
+    :`<tr><td colspan="5" class="sub" style="text-align:center;padding:22px">No content blocks yet — create the first one below.</td></tr>`}
     </tbody></table></div>
     <div class="btnrow" style="margin-top:12px"><button class="btn btn-gold btn-sm" onclick="cmsEdit(0)">${I.plus} New block</button></div>
   </div>`;
 }
 function admReports(){
+  // Every export the API actually serves, each showing how many rows it
+  // currently holds so an empty download is never a surprise.
+  const K=ADMIN_STATS||{};
+  const rows=[
+    ["Bookings","Every reservation with totals","bookings",K.bookingsAll],
+    ["Revenue by month","Twelve-month series","revenue",null],
+    ["Properties","Listings, pricing and ratings","properties",(K.listings||0)+(K.listingsPend||0)],
+    ["Users","Accounts, tiers and points","users",K.users],
+    ["Hosts","Owners, listings and payout status","hosts",K.hosts],
+    ["Reviews","Published guest reviews","reviews",K.reviews],
+    ["Newsletter","Subscriber list","subscribers",K.subscribers],
+    ["Audit log","Every administrative action","audit",null],
+  ];
   return `<div class="panel"><h3 style="font-size:18px">Reporting &amp; analytics</h3>
-    <p class="small" style="margin-bottom:12px">Custom reports on occupancy, revenue by region, demographics and booking trends.</p>
+    <p class="small" style="margin-bottom:12px">Custom reports on occupancy, revenue by region, demographics and booking trends. Each download is generated live from the database.</p>
     <div class="grid-3">
-      ${[["Bookings","Every reservation with totals","bookings"],["Revenue by month","Twelve-month series","revenue"],["Properties","Listings, pricing and ratings","properties"],["Users","Accounts, tiers and points","users"],["Reviews","Published guest reviews","reviews"],["Newsletter","Subscriber list","subscribers"]].map(r=>`
-      <div class="panel" style="background:var(--card-2)"><b style="font-family:var(--fs-serif);font-size:17px">${r[0]}</b><div class="small" style="margin:4px 0 10px">${r[1]}</div>
+      ${rows.map(r=>`
+      <div class="panel" style="background:var(--card-2)"><b style="font-family:var(--fs-serif);font-size:17px">${r[0]}</b><div class="small" style="margin:4px 0 10px">${r[1]}${r[3]!=null?` · <b>${r[3]}</b> record${r[3]===1?"":"s"}`:""}</div>
       <div class="btnrow"><a class="btn btn-ghost btn-sm" href="${JL.apiBase}report.php?r=${r[2]}&format=csv">${I.download} Download CSV</a></div></div>`).join("")}
     </div>
   </div>`;
@@ -403,9 +451,10 @@ function admReports(){
 function admRoles(){
   return `<div class="panel"><h3 style="font-size:18px">Role-based access control</h3>
     <div class="tbl-wrap" style="margin-top:10px"><table class="tbl"><thead><tr><th>Role</th><th>Access</th><th>Members</th><th></th></tr></thead><tbody>
-    ${(ADMIN_STATE.roles||[]).map(r=>`
-    <tr><td class="strong">${esc(String(r[0]).charAt(0).toUpperCase()+String(r[0]).slice(1))}</td><td class="sub">${esc(r[1])}</td><td>${r[2]}</td>
-    <td><span class="pill-status ok">active</span></td></tr>`).join("")}
+    ${(ADMIN_STATE.roles||[]).length?(ADMIN_STATE.roles).map(r=>`
+    <tr><td class="strong">${esc(cap(String(r[0])))}</td><td class="sub">${esc(r[1])}</td><td>${r[2]}</td>
+    <td><span class="pill-status ${r[2]>0?"ok":"info"}">${r[2]>0?"active":"no members"}</span></td></tr>`).join("")
+    :`<tr><td colspan="4" class="sub" style="text-align:center;padding:22px">No roles configured.</td></tr>`}
     </tbody></table></div>
     <div class="small" style="margin-top:10px">Every admin action is written to the immutable audit log — accountability by design.</div>
   </div>`;
@@ -413,8 +462,9 @@ function admRoles(){
 function admAudit(){
   return `<div class="panel"><h3 style="font-size:18px">Audit log</h3>
     <div class="tbl-wrap" style="margin-top:10px"><table class="tbl"><thead><tr><th>Time</th><th>Actor</th><th>Action</th><th></th></tr></thead><tbody>
-    ${ADMIN_STATE.audit.map(a=>`<tr><td class="sub">${a[0]}</td><td>${a[1]}</td><td>${a[2]}</td>
-    <td><span class="pill-status ${a[3]==="ok"?"ok":a[3]==="warn"?"warn":"info"}">${a[3]}</span></td></tr>`).join("")}
+    ${(ADMIN_STATE.audit||[]).length?(ADMIN_STATE.audit).map(a=>`<tr><td class="sub">${esc(a[0])}</td><td>${esc(a[1])}</td><td>${esc(a[2])}</td>
+    <td><span class="pill-status ${a[3]==="ok"?"ok":a[3]==="warn"?"warn":"info"}">${esc(a[3])}</span></td></tr>`).join("")
+    :`<tr><td colspan="4" class="sub" style="text-align:center;padding:22px">No administrative actions recorded yet.</td></tr>`}
     </tbody></table></div>
     <div class="btnrow" style="margin-top:12px"><a class="btn btn-ghost btn-sm" href="${JL.apiBase}report.php?r=audit&format=csv">${I.download} Export CSV</a></div>
   </div>`;
