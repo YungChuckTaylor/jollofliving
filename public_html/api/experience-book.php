@@ -12,6 +12,12 @@ if (!$exp) json_fail('We could not find that experience.', 404);
 
 $name  = input_str('name');
 $email = strtolower(input_str('email'));
+// input_str() yields '' for absent fields, which ?? would happily accept, so
+// test for empty explicitly before falling back to the member's own details.
+if ($u = Auth::user()) {
+    if ($name === '')  $name  = (string) ($u['name'] ?? '');
+    if ($email === '') $email = strtolower((string) ($u['email'] ?? ''));
+}
 if ($name === '')      json_fail('Please tell us your name.');
 if (!is_email($email)) json_fail('Please enter a valid email address.');
 

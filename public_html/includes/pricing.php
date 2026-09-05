@@ -143,10 +143,17 @@ final class BookingService
         $gift   = (int) ($in['gift'] ?? 0);
         $q = Pricing::quote($p, $nights, $addons, $promo, $gift);
 
+        // Fall back to the signed-in member's own details. Note the checks are
+        // for an EMPTY value, not just a missing key: the booking form omits
+        // these fields for a signed-in guest and posts empty strings, which
+        // ?? would happily accept.
         $user = Auth::user();
-        $name  = trim((string) ($in['name'] ?? ($user['name'] ?? '')));
-        $email = strtolower(trim((string) ($in['email'] ?? ($user['email'] ?? ''))));
-        $phone = trim((string) ($in['phone'] ?? ($user['phone'] ?? '')));
+        $name  = trim((string) ($in['name'] ?? ''));
+        $email = strtolower(trim((string) ($in['email'] ?? '')));
+        $phone = trim((string) ($in['phone'] ?? ''));
+        if ($name === '')  { $name  = trim((string) ($user['name'] ?? '')); }
+        if ($email === '') { $email = strtolower(trim((string) ($user['email'] ?? ''))); }
+        if ($phone === '') { $phone = trim((string) ($user['phone'] ?? '')); }
         if ($name === '' || !is_email($email)) {
             return [false, 'Please provide your name and a valid email address.', null];
         }

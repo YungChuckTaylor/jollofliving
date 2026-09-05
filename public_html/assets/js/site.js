@@ -2228,7 +2228,7 @@ function openPasswordChange(){
 async function submitPassword(){
   const oldPw=$("#pwOld").value, np=$("#pwNew").value, np2=$("#pwNew2").value;
   if(np!==np2){ toast("Those new passwords do not match","x"); return; }
-  const r=await api("account.php",{action:"password",current:oldPw,password:np});
+  const r=await api("account.php",{action:"password",current:oldPw,password:np,confirm:np2});
   if(!r.ok){ toast(r.message||"Could not update your password","x"); return; }
   closeModal(); toast(r.message||"Password updated ✨","check");
 }
