@@ -2283,7 +2283,18 @@ function bindAuth(){
       email:($("#auEmail").value||"").trim(),
       password:$("#auPass").value||"",
     };
-    if(isRegister){ payload.name=($("#auName").value||"").trim(); payload.phone=($("#auPhone").value||"").trim(); }
+    if(isRegister){
+      payload.name=($("#auName").value||"").trim();
+      payload.phone=($("#auPhone").value||"").trim();
+      // the API rejects a registration that has not accepted the terms
+      const terms=$("#auTerms");
+      if(terms && !terms.checked){
+        btn.disabled=false; btn.textContent=label;
+        toast("Please accept the Terms & Privacy Policy to continue","shield");
+        return;
+      }
+      payload.terms=true;
+    }
     const r=await api("auth.php",payload);
     if(!r.ok){ btn.disabled=false; btn.textContent=label; toast(r.message||"Could not sign you in","x"); return; }
     toast(r.message||"Welcome ✨","check");
@@ -3604,7 +3615,7 @@ const PAGE_RENDER = {
   wishlist:         () => ({ html: pWishlist(), bind: bindWishlist }),
   compare:          () => ({ html: pCompare() }),
   account:          () => ({ html: pAccount(), bind: bindAccount }),
-  auth:             () => ({ html: pAuth(qp("mode") || "signin") }),
+  auth:             () => ({ html: pAuth(qp("mode") || "signin"), bind: bindAuth }),
   host:             () => ({ html: pHost() }),
   host_onboarding:  () => ({ html: pHostOnboarding(), bind: bindHostOnboarding }),
   host_dashboard:   () => ({ html: pHostDashboard(qps()), bind: bindHostDashboard }),
