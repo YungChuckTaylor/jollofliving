@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Jollof Living</string>
+    <string name="title_activity_main">Jollof Living</string>
+    <string name="package_name">com.jollofliving.app</string>
+    <string name="custom_url_scheme">com.jollofliving.app</string>
+</resources>
