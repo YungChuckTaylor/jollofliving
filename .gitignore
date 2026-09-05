@@ -23,3 +23,6 @@ Thumbs.db
 # --- release bundle (regenerate with tools/pack.sh) -----------------------
 jollofliving-hostgator.zip
 jollof-update.zip
+
+# The incremental update zip is published under dist/ for download.
+!dist/jollof-update.zip
