@@ -384,6 +384,7 @@ function pHostDashboard(q){
     `<span class="badge">${st.listings||0} listing${(st.listings||0)===1?"":"s"}</span>`,
     st.rating?`<span class="badge ok">${I.gold} ${st.rating} rating</span>`:"",
     `<span class="badge">Take rate ${Math.round((st.takeRate||0.12)*100)}%</span>`,
+    `<a class="btn btn-ghost btn-sm" href="${JL.base}logout.php">Log out</a>`,
   ].join("");
   return `${pageHead([["Home",URL("/")],["Host",URL("/host")],["Dashboard"]],"Owner <em class='serif-i'>dashboard</em>","Your listings, bookings, earnings and payouts — all in one place.",badges)}
   <div class="page-body"><div class="wrap">
@@ -391,6 +392,9 @@ function pHostDashboard(q){
       <nav class="admin-nav">
         <div class="sec">Owner tools</div>
         ${nav.map(([k,l,i])=>`<a href="${URL("/host/dashboard")}?tab=${k}" class="${tab===k?"active":""}">${I[i]} ${l}</a>`).join("")}
+        <div class="sec" style="margin-top:14px">Account</div>
+        <a href="${URL("/account")}">${I.users} My account</a>
+        <a href="${JL.base}logout.php">${I.lock} Log out</a>
       </nav>
       <div id="hdContent">${(()=>{ const m=[["overview",hdOverview],["calendar",hdCalendar],["listings",hdListings],["analytics",hdAnalytics],["revenue",hdRevenue],["ai",hdAI],["team",hdTeam],["templates",hdTemplates],["channels",hdChannels],["payouts",hdPayouts]].find(([k])=>k===tab)||["overview",hdOverview]; return m[1](); })()}</div>
     </div>

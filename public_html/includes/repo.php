@@ -823,9 +823,10 @@ final class Repo
                 $u['status_level'],
                 (int) $u['id'],
             ], DB::all('SELECT * FROM users ORDER BY id LIMIT 200')),
-            'moderation' => array_map(static fn($m) => [
-                $m['item'], $m['ref_slug'] ?: '—', $m['item_type'], $m['note'], $m['level'], (int) $m['id'],
-            ], DB::all("SELECT * FROM moderation_queue WHERE status = 'open' ORDER BY id")),
+            // The queue is assembled live: listings a host has just submitted
+            // and reviews awaiting a decision are the real work, and they were
+            // previously invisible because only the static queue table was read.
+            'moderation' => self::moderationQueue(),
             'fraud' => array_map(static fn($f) => [
                 $f['code'], $f['subject'], $f['reason'], (string) $f['score'], $f['level'], (int) $f['id'],
             ], DB::all("SELECT * FROM fraud_flags WHERE status = 'open' ORDER BY score DESC")),
@@ -839,7 +840,100 @@ final class Repo
             'cms' => array_map(static fn($c) => [
                 $c['title'], $c['status'], $c['updated_label'] ?: date('M j', strtotime((string) $c['updated_at'])), $c['owner'], (int) $c['id'],
             ], DB::all('SELECT * FROM cms_blocks ORDER BY id')),
+            // The CMS editor needs the full block, not just the table row.
+            'cmsBlocks' => array_map(static fn($c) => [
+                'id' => (int) $c['id'], 'key' => $c['block_key'], 'title' => $c['title'],
+                'body' => (string) $c['body'], 'status' => $c['status'],
+            ], DB::all('SELECT * FROM cms_blocks ORDER BY id')),
+            // Real member counts per role, instead of the hardcoded zeros.
+            'roles' => self::roleSummary(),
+            'reviewsPending' => array_map(static fn($r) => [
+                (int) $r['id'], $r['author'], (string) $r['body'], (float) $r['rating'], $r['property_name'] ?: '—',
+            ], DB::all(
+                "SELECT r.*, p.name AS property_name FROM reviews r
+                 LEFT JOIN properties p ON p.id = r.property_id
+                 WHERE r.status = 'pending' ORDER BY r.id DESC"
+            )),
         ];
+    }
+
+    /**
+     * Everything awaiting a moderator decision, newest first.
+     *
+     * Each row carries a "kind:id" reference so the console can route the
+     * approve/reject back to the right entity.
+     */
+    public static function moderationQueue(): array
+    {
+        $out = [];
+
+        foreach (DB::all(
+            "SELECT p.*, u.name AS host_name, u.email AS host_email
+               FROM properties p
+          LEFT JOIN users u ON u.id = p.host_id
+              WHERE p.status IN ('pending','draft')
+           ORDER BY p.id DESC"
+        ) as $p) {
+            $out[] = [
+                'New listing: ' . $p['name'],
+                $p['slug'] ?: '—',
+                'Listing · ' . trim(($p['area'] ?? '') . ', ' . ($p['city'] ?? ''), ', '),
+                $p['host_name'] ? 'Submitted by ' . $p['host_name'] : 'No host on record',
+                'warn',
+                (int) $p['id'],
+                'listing',
+                money((int) $p['price']) . ' / night',
+            ];
+        }
+
+        foreach (DB::all(
+            "SELECT r.*, p.name AS property_name, p.slug AS property_slug
+               FROM reviews r
+          LEFT JOIN properties p ON p.id = r.property_id
+              WHERE r.status = 'pending'
+           ORDER BY r.id DESC"
+        ) as $r) {
+            $out[] = [
+                'Review: ' . mb_substr((string) $r['body'], 0, 60) . (mb_strlen((string) $r['body']) > 60 ? '…' : ''),
+                $r['property_slug'] ?: '—',
+                'Review · ' . ($r['property_name'] ?: 'unknown property'),
+                'By ' . ($r['author'] ?: 'guest') . ' · ' . (int) $r['rating'] . '★',
+                'info',
+                (int) $r['id'],
+                'review',
+                (int) $r['rating'] . '★',
+            ];
+        }
+
+        // Anything an operator logged by hand still belongs in the queue.
+        foreach (DB::all("SELECT * FROM moderation_queue WHERE status = 'open' ORDER BY id") as $m) {
+            $out[] = [
+                $m['item'], $m['ref_slug'] ?: '—', $m['item_type'], $m['note'],
+                $m['level'], (int) $m['id'], 'flag', '',
+            ];
+        }
+
+        return $out;
+    }
+
+    /** Roles with their real member counts, for the access-control tab. */
+    public static function roleSummary(): array
+    {
+        $describe = [
+            'admin'     => 'Full platform access — moderation, users, finance, settings',
+            'host'      => 'Own listings, calendar, bookings and payouts',
+            'corporate' => 'Business travel portal and consolidated invoicing',
+            'guest'     => 'Book, review, message and manage their own trips',
+        ];
+        $out = [];
+        foreach ($describe as $role => $desc) {
+            $out[] = [
+                $role,
+                $desc,
+                (int) DB::value('SELECT COUNT(*) FROM users WHERE role = ?', [$role], 0),
+            ];
+        }
+        return $out;
     }
 
     /** Headline numbers for the back office dashboard — all real queries. */

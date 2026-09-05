@@ -111,19 +111,27 @@ function closeDrawer() { const d = $("#drawer"); if (d) d.classList.remove("open
 $("#burgerBtn").addEventListener("click", openDrawer);
 $("#drawer").addEventListener("click", (e) => { if (e.target.closest("a")) closeDrawer(); });
 
-/* drawer content: real page links */
+/* drawer content: real page links, adjusted for who is signed in */
 (function () {
   const links = [["/", "Home"], ["/stays", "Stays"], ["/experiences", "Experiences"],
     ["/neighborhoods", "Neighbourhoods"], ["/concierge", "AI Concierge"],
     ["/trips", "My trips"], ["/wishlist", "Wishlist"], ["/host", "Host"],
     ["/membership", "Jollof Club"], ["/reviews", "Reviews"], ["/blog", "Journal"], ["/help", "Help"]];
+  // Owners get a direct route to their workspace.
+  if (IS_OWNER) links.splice(8, 0, ["/host/dashboard", "Owner dashboard"]);
   const dl = $("#drawerLinks");
   if (dl) dl.innerHTML = links.map(([h, l]) => `<a href="${URL(h)}">${l}</a>`).join("");
+
+  // Signing out only makes sense when signed in, and offering "Sign in" to
+  // someone who already is was the bug users reported.
   const dc = $("#drawerCtas");
-  if (dc) dc.innerHTML =
-    `<a class="btn btn-gold" href="${URL("/host/onboarding")}">List your home</a>
-     <a class="btn btn-ghost" href="${URL("/auth")}">Sign in / Join</a>
-     <a class="btn btn-ghost" href="${URL("/account")}">My account</a>`;
+  if (dc) dc.innerHTML = USER
+    ? `<a class="btn btn-gold" href="${URL(IS_OWNER ? "/host/dashboard" : "/host/onboarding")}">${IS_OWNER ? "Owner dashboard" : "List your home"}</a>
+       <a class="btn btn-ghost" href="${URL("/account")}">My account</a>
+       <a class="btn btn-ghost" href="${JL.base}logout.php" id="drawerLogout">Log out</a>`
+    : `<a class="btn btn-gold" href="${URL("/host/onboarding")}">List your home</a>
+       <a class="btn btn-ghost" href="${URL("/auth")}">Sign in / Join</a>
+       <a class="btn btn-ghost" href="${URL("/auth?mode=register")}">Create account</a>`;
 })();
 
 /* ---------------- quick actions (real page links) ---------------- */

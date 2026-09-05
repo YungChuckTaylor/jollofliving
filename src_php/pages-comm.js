@@ -249,7 +249,11 @@ function pAccount(){
       <div class="small">${esc(U.email||"")}${U.phone?" · "+esc(U.phone):""} · Member since ${esc(U.memberSince||"")}</div>
       <div class="btnrow" style="margin-top:8px">${U.emailVerified?`<span class="badge ok">${I.check} Email verified</span>`:`<span class="badge">Email unverified</span>`}${U.phone?`<span class="badge ok">${I.check} Phone verified</span>`:""}${U.kyc?`<span class="badge">${I.gold} ID verified</span>`:`<span class="badge">ID pending</span>`}<span class="badge">${tier.letter} ${tier.name}</span></div></div>
       <div style="text-align:right"><div class="small">Jollof Points</div><div style="font-family:var(--fs-serif);font-size:34px;font-weight:600;color:var(--accent)">${S.points.toLocaleString()}</div>
-      <div class="small">${tier.name} · ${tier.mult} multiplier</div></div>
+      <div class="small">${tier.name} · ${tier.mult} multiplier</div>
+      <div class="btnrow" style="margin-top:10px;justify-content:flex-end">
+        ${IS_OWNER?`<a class="btn btn-ghost btn-sm" href="${URL("/host/dashboard")}">Owner dashboard</a>`:""}
+        <a class="btn btn-ghost btn-sm" href="${JL.base}logout.php">Log out</a>
+      </div></div>
     </div>
 
     <div class="grid-2" style="margin-top:18px">

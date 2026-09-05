@@ -291,9 +291,14 @@ final class View
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="ic-sun"><circle cx="12" cy="12" r="4"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.5 4.5l1.8 1.8M17.7 17.7l1.8 1.8M4.5 19.5l1.8-1.8M17.7 6.3l1.8-1.8"/></svg>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="ic-moon"><path d="M20.5 14.5A8.5 8.5 0 1 1 9.5 3.5a7 7 0 0 0 11 11z"/></svg>
       </button>
-      <a class="btn btn-gold btn-sm" href="<?= e(url('host-onboarding.php')) ?>" id="navListBtn">List your home</a>
+      <?php if ($user && Auth::isHost()): ?>
+        <a class="btn btn-gold btn-sm" href="<?= e(url('host-dashboard.php')) ?>" id="navListBtn">Owner dashboard</a>
+      <?php else: ?>
+        <a class="btn btn-gold btn-sm" href="<?= e(url('host-onboarding.php')) ?>" id="navListBtn">List your home</a>
+      <?php endif; ?>
       <?php if ($user): ?>
         <a class="btn btn-ghost btn-sm" href="<?= e(url('account.php')) ?>" id="navAccountBtn"><span class="avatar sm" id="navAvatar"><?= e(mb_strtoupper(mb_substr((string) $user['name'], 0, 1))) ?></span> <?= e(explode(' ', (string) $user['name'])[0]) ?></a>
+        <a class="btn btn-ghost btn-sm" href="<?= e(url('logout.php')) ?>" id="navLogoutBtn" title="Log out">Log out</a>
       <?php else: ?>
         <a class="btn btn-ghost btn-sm" href="<?= e(url('auth.php')) ?>" id="navAccountBtn">Sign in</a>
       <?php endif; ?>

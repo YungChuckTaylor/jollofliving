@@ -22,7 +22,7 @@ $reports = [
     'properties' => [
         'Properties',
         ['ID', 'Name', 'Area', 'City', 'Type', 'Rate (NGN)', 'Guests', 'Rating', 'Reviews', 'Status'],
-        'SELECT slug, name, area, city, type, price, guests, rating, reviews, status FROM properties ORDER BY id',
+        'SELECT slug, name, area, city, ptype, price, guests, rating, reviews_count, status FROM properties ORDER BY id',
     ],
     'users' => [
         'Users',
@@ -39,6 +39,18 @@ $reports = [
         'Newsletter subscribers',
         ['Email', 'Source', 'Status', 'Joined'],
         'SELECT email, source, status, created_at FROM subscribers ORDER BY id DESC',
+    ],
+    'hosts' => [
+        'Property owners',
+        ['ID', 'Name', 'Email', 'Listings', 'Live', 'Gross (NGN)', 'Joined'],
+        "SELECT u.id, u.name, u.email,
+                (SELECT COUNT(*) FROM properties p WHERE p.host_id = u.id) AS listings,
+                (SELECT COUNT(*) FROM properties p WHERE p.host_id = u.id AND p.status = 'live') AS live,
+                (SELECT COALESCE(SUM(b.total),0) FROM bookings b
+                   JOIN properties p ON p.id = b.property_id
+                  WHERE p.host_id = u.id AND b.status <> 'cancelled') AS gross,
+                u.created_at
+           FROM users u WHERE u.is_host = 1 OR u.role = 'host' ORDER BY u.id",
     ],
     'audit' => [
         'Audit log',

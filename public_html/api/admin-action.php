@@ -158,6 +158,18 @@ switch ($entity) {
         json_ok([], $message);
     }
 
+    /* --------------------------------------------- hand-logged queue flags */
+    case 'flag': {
+        $m = DB::row('SELECT * FROM moderation_queue WHERE id = ?', [$id]);
+        if (!$m) json_fail('That queue item no longer exists.', 404);
+        if ($action === 'approve' || $action === 'reject') {
+            DB::update('moderation_queue', ['status' => $action === 'approve' ? 'cleared' : 'rejected'], 'id = ?', [$id]);
+            audit($actor, ucfirst($action) . 'd queue item — ' . $m['item'], $action === 'approve' ? 'ok' : 'warn');
+            json_ok([], $action === 'approve' ? 'Cleared from the queue' : 'Removed from the queue');
+        }
+        break;
+    }
+
     /* ------------------------------------------------------------ reviews */
     case 'review': {
         $r = DB::row('SELECT * FROM reviews WHERE id = ?', [$id]);

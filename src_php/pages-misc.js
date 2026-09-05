@@ -312,15 +312,33 @@ function admDashboard(){
   </div>`;
 }
 function admModeration(){
-  return `<div class="panel"><h3 style="font-size:18px">Moderation queue</h3>
-    <div class="tbl-wrap" style="margin-top:10px"><table class="tbl"><thead><tr><th>Item</th><th>Type</th><th>Status</th><th></th></tr></thead><tbody>
-    ${ADMIN_STATE.moderation.map(m=>`<tr><td class="strong">${m[0]}</td><td class="sub">${m[1]} · ${m[2]}</td>
-      <td><span class="pill-status ${m[3]==="ok"?"ok":"warn"}">${m[3]}</span></td>
-      <td><div class="btnrow"><button class="btn btn-gold btn-sm" onclick="admAction('moderation','approve',${m[5]})">Approve</button>
-      <button class="btn btn-ghost btn-sm" onclick="admAction('moderation','reject',${m[5]})">Reject</button></div></td></tr>`).join("")}
-    </tbody></table></div>
-    <div class="small" style="margin-top:10px">AI pre-screens every listing, photo and review for prohibited content, stolen images and policy breaches before a human sees it.</div>
+  const q=ADMIN_STATE.moderation||[];
+  // Each row is [item, slug, type, note, level, id, kind, extra]. The kind
+  // decides which entity the approve/reject is routed to.
+  const entityFor=(kind)=> kind==="listing" ? "moderation" : (kind==="review" ? "review" : "flag");
+  const label={listing:"Listing",review:"Review",flag:"Flagged"};
+  return `<div class="panel"><h3 style="font-size:18px">Moderation queue ${q.length?`<span class="badge">${q.length} waiting</span>`:""}</h3>
+    ${q.length?`<div class="tbl-wrap" style="margin-top:10px"><table class="tbl">
+      <thead><tr><th>Item</th><th>Type</th><th>Detail</th><th></th></tr></thead><tbody>
+    ${q.map(m=>{
+      const kind=m[6]||"flag", ent=entityFor(kind);
+      return `<tr>
+      <td><b class="strong">${esc(m[0])}</b>${m[1]&&m[1]!=="—"?`<div class="sub">${esc(m[1])}</div>`:""}</td>
+      <td><span class="pill-status ${m[4]||"info"}">${esc(label[kind]||"Item")}</span><div class="sub">${esc(m[2]||"")}</div></td>
+      <td class="sub">${esc(m[3]||"")}${m[7]?`<div>${esc(m[7])}</div>`:""}</td>
+      <td><div class="btnrow">
+        ${kind==="listing"?`<button class="btn btn-ghost btn-sm" onclick="admPreview('${esc(m[1])}')">Preview</button>`:""}
+        <button class="btn btn-gold btn-sm" onclick="admAction('${ent}','approve',${m[5]})">Approve</button>
+        <button class="btn btn-ghost btn-sm" onclick="admAction('${ent}','reject',${m[5]})">Reject</button>
+      </div></td></tr>`;}).join("")}
+    </tbody></table></div>`
+    :`<p class="small" style="margin-top:10px">Nothing waiting — new listings and flagged reviews land here automatically.</p>`}
+    <div class="small" style="margin-top:10px">Approving a listing publishes it immediately and notifies the owner. Rejecting sends it back with reviewer notes.</div>
   </div>`;
+}
+function admPreview(slug){
+  if(!slug||slug==="—"){ toast("This item has no public page yet","info"); return; }
+  window.open(URL("/stay/"+slug),"_blank");
 }
 function admUsers(){
   return `<div class="panel"><h3 style="font-size:18px">User management</h3>
@@ -339,8 +357,8 @@ function admUsers(){
 function admPromotions(){
   return `<div class="panel"><h3 style="font-size:18px">Promo &amp; campaign manager</h3>
     <div class="tbl-wrap" style="margin-top:10px"><table class="tbl"><thead><tr><th>Campaign</th><th>Window</th><th>Status</th><th>Revenue</th><th></th></tr></thead><tbody>
-    ${ADMIN_STATE.campaigns.map(c=>`<tr><td class="strong">${c[0]}</td><td class="sub">${c[1]}</td>
-      <td><span class="pill-status ${c[4]==="ok"?"ok":c[4]==="info"?"info":"warn"}">${c[3]}</span></td><td>${c[2]}</td>
+    ${ADMIN_STATE.campaigns.map(c=>`<tr><td class="strong">${esc(c[1])}<div class="sub">${esc(c[0])}</div></td><td class="sub">${esc(c[2]||"—")}</td>
+      <td><span class="pill-status ${c[5]==="ok"?"ok":c[5]==="info"?"info":"warn"}">${esc(c[3])}</span></td><td>${esc(c[4]||"—")}</td>
       <td><button class="btn btn-ghost btn-sm" onclick="campaignEdit(${c[6]})">${I.edit} Edit</button></td></tr>`).join("")}
     </tbody></table></div>
     <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:14px">
@@ -385,7 +403,7 @@ function admReports(){
 function admRoles(){
   return `<div class="panel"><h3 style="font-size:18px">Role-based access control</h3>
     <div class="tbl-wrap" style="margin-top:10px"><table class="tbl"><thead><tr><th>Role</th><th>Access</th><th>Members</th><th></th></tr></thead><tbody>
-    ${(JL.roles||[["admin","Full platform access",0],["host","Own listings, calendar and payouts",0],["corporate","Business travel portal",0],["guest","Book, review and message",0]]).map(r=>`
+    ${(ADMIN_STATE.roles||[]).map(r=>`
     <tr><td class="strong">${esc(String(r[0]).charAt(0).toUpperCase()+String(r[0]).slice(1))}</td><td class="sub">${esc(r[1])}</td><td>${r[2]}</td>
     <td><span class="pill-status ok">active</span></td></tr>`).join("")}
     </tbody></table></div>
@@ -532,7 +550,7 @@ async function admAction(entity,action,id){
   setTimeout(()=>location.reload(),600);
 }
 function cmsEdit(id){
-  const block=(JL.cmsBlocks||[]).find(b=>b.id===id)||{id:0,title:"",body:"",status:"Draft"};
+  const block=(ADMIN_STATE.cmsBlocks||[]).find(b=>b.id===id)||{id:0,title:"",body:"",status:"Draft"};
   openModal(`<h2 style="margin-bottom:4px">${id?"Edit content block":"New content block"}</h2>
     <p class="small" style="margin-bottom:14px">Blocks are stored in MySQL and can be rendered on any page.</p>
     <div class="frm-row"><label>Title</label><input class="inp" id="cmsTitle" value="${esc(block.title||"")}"></div>
