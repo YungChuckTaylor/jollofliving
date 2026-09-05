@@ -355,7 +355,11 @@ function bindAuth(){
       email:($("#auEmail").value||"").trim(),
       password:$("#auPass").value||"",
     };
-    if(isRegister){ payload.name=($("#auName").value||"").trim(); payload.phone=($("#auPhone").value||"").trim(); }
+    if(isRegister){
+      payload.name=($("#auName").value||"").trim();
+      payload.phone=($("#auPhone").value||"").trim();
+      payload.terms=!!($("#auTerms")&&$("#auTerms").checked);
+    }
     const r=await api("auth.php",payload);
     if(!r.ok){ btn.disabled=false; btn.textContent=label; toast(r.message||"Could not sign you in","x"); return; }
     toast(r.message||"Welcome ✨","check");
