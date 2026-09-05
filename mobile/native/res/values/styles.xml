@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--
+      Framework themes only. The Capacitor project's styles.xml inherits from
+      AppCompat, which needs the androidx artifacts; this build compiles
+      against android.jar alone, so the theme comes from the platform.
+    -->
+    <style name="JollofTheme" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/jlBackground</item>
+        <item name="android:colorBackground">@color/jlBackground</item>
+        <item name="android:statusBarColor">@color/jlBackground</item>
+        <item name="android:navigationBarColor">@color/jlBackground</item>
+        <item name="android:colorAccent">@color/jlGold</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+    <!-- Shown for the fraction of a second before the WebView paints. -->
+    <style name="JollofTheme.Launch" parent="JollofTheme">
+        <item name="android:windowBackground">@drawable/launch_splash</item>
+    </style>
+
+</resources>

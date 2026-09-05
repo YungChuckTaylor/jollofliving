@@ -38,7 +38,11 @@ mobile/android/.gradle/
 mobile/android/local.properties
 mobile/android/app/src/main/assets/public/
 mobile/android/capacitor-cordova-android-plugins/
+mobile/.build/
 *.apk
 *.aab
 *.keystore
 *.jks
+
+# The built app is published under mobile/dist/ for download.
+!mobile/dist/*.apk

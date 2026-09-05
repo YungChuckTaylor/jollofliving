@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The app's own palette: the same near-black and gold the website uses. -->
+    <color name="jlBackground">#0B0F0C</color>
+    <color name="jlGold">#D4AF37</color>
+</resources>

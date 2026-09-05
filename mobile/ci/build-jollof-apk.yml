@@ -1,0 +1,166 @@
+# Copy this file to .github/workflows/ to enable it — GitHub only runs
+# workflows from that directory.
+
+name: Build Jollof Living APK
+
+# Builds the Capacitor Android app in mobile/ and publishes the APK.
+#
+#   * the artifact is uploaded to the run (Actions -> run -> Artifacts)
+#   * and, when `commit_apk` is true, the APK is committed back to the
+#     branch under mobile/dist/ so it can be pulled with `git pull`.
+#
+# Run it with:  gh workflow run build-jollof-apk.yml --ref <branch>
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_base:
+        description: "Mobile API base URL (blank = PRODUCTION_API from mobile/src/js/config.js)"
+        required: false
+        default: ""
+        type: string
+      build_type:
+        description: "Which APK to build"
+        required: false
+        default: "debug"
+        type: choice
+        options: [debug, release]
+      commit_apk:
+        description: "Commit the APK back to this branch under mobile/dist/"
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools platforms;android-34 build-tools;34.0.0"
+
+      - name: Install dependencies
+        working-directory: mobile
+        run: npm install --no-audit --no-fund
+
+      - name: Draw sprite sheets
+        working-directory: mobile
+        run: npm run sprites
+
+      - name: Build the web bundle
+        working-directory: mobile
+        run: |
+          set -euo pipefail
+          if [ -n "${{ inputs.api_base }}" ]; then
+            node tools/build.mjs --api="${{ inputs.api_base }}"
+          else
+            node tools/build.mjs
+          fi
+
+      - name: Sync the Android project
+        working-directory: mobile
+        run: npx cap sync android
+
+      - name: Create a signing key for the release build
+        if: ${{ inputs.build_type == 'release' }}
+        working-directory: mobile/android
+        run: |
+          set -euo pipefail
+          keytool -genkeypair -v -keystore app/jollof-release.keystore \
+            -alias jollof -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass jollofliving -keypass jollofliving \
+            -dname "CN=Jollof Living, OU=Mobile, O=Jollof Living, L=Lagos, C=NG"
+          cat >> app/build.gradle <<'EOF'
+
+          android {
+              signingConfigs {
+                  jollofRelease {
+                      storeFile file('jollof-release.keystore')
+                      storePassword 'jollofliving'
+                      keyAlias 'jollof'
+                      keyPassword 'jollofliving'
+                  }
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.jollofRelease
+                  }
+              }
+          }
+          EOF
+
+      - name: Assemble the APK
+        working-directory: mobile/android
+        run: |
+          set -euo pipefail
+          chmod +x ./gradlew
+          if [ "${{ inputs.build_type }}" = "release" ]; then
+            ./gradlew :app:assembleRelease --no-daemon --stacktrace
+          else
+            ./gradlew :app:assembleDebug --no-daemon --stacktrace
+          fi
+
+      - name: Name the APK
+        id: apk
+        run: |
+          set -euo pipefail
+          src="$(find mobile/android/app/build/outputs/apk -name '*.apk' -type f | head -n 1)"
+          test -n "$src"
+          mkdir -p mobile/dist
+          out="mobile/dist/jollof-living-${{ inputs.build_type }}.apk"
+          cp "$src" "$out"
+          echo "path=$out" >> "$GITHUB_OUTPUT"
+          echo "size=$(du -h "$out" | cut -f1)" >> "$GITHUB_OUTPUT"
+          echo "sha=$(sha256sum "$out" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Jollof Living APK"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| file | \`$out\` |"
+            echo "| size | $(du -h "$out" | cut -f1) |"
+            echo "| sha256 | \`$(sha256sum "$out" | cut -d' ' -f1)\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the APK as a run artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jollof-living-${{ inputs.build_type }}-apk
+          path: ${{ steps.apk.outputs.path }}
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Commit the APK to the branch
+        if: ${{ inputs.commit_apk }}
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f "${{ steps.apk.outputs.path }}"
+          if git diff --cached --quiet; then
+            echo "APK unchanged — nothing to commit."
+            exit 0
+          fi
+          git commit -m "build(mobile): ${{ inputs.build_type }} APK $(date -u +%Y-%m-%dT%H:%MZ) [skip ci]"
+          git push origin HEAD:${{ github.ref_name }}

@@ -25,6 +25,7 @@ database/
 
 src_php/                front-end sources — build with tools/build_php.mjs
 tools/                  build_php.mjs, gen_pages.mjs, gen_seed.mjs
+mobile/                 the Android app — sources, build, and dist/*.apk
 test.py                 Playwright end-to-end suite
 DEPLOYMENT.md           step-by-step HostGator instructions
 ```
@@ -117,6 +118,24 @@ node tools/e2e/owner.mjs          # 25 checks: customer vs owner accounts
 
 Both exit non-zero on failure. `tools/e2e/harness.mjs` is the shared harness
 (`mount`, `login`, `ok`).
+
+## Android app
+
+The phone app lives in [`mobile/`](mobile/README.md). Its screens are bundled
+inside the APK so it opens with no signal, while every value comes from the
+same MySQL database the website reads, through `public_html/api/mobile/`.
+
+Built and signed packages are in [`mobile/dist/`](mobile/dist/README.md).
+Rebuild either of them with:
+
+```bash
+cd mobile && npm install
+npm run apk            # debug package, installable as it is
+npm run apk:release    # release-signed package
+```
+
+No Android Studio needed — the build fetches its own JDK and Android tools the
+first time, or uses a local SDK when it finds one.
 
 ## Deployment
 

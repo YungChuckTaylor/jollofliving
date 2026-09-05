@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The launch screen: the app's black with the gold key centred on it. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/jlBackground" />
+    <item>
+        <bitmap
+            android:src="@drawable/splash"
+            android:gravity="center" />
+    </item>
+</layer-list>

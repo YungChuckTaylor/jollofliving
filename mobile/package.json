@@ -6,10 +6,13 @@
   "scripts": {
     "sprites": "node tools/make-sprites.mjs",
     "build": "node tools/build.mjs",
+    "apk": "node tools/build-apk.mjs",
+    "apk:release": "node tools/build-apk.mjs --release",
+    "test:app": "node tools/e2e/webview-smoke.mjs",
     "sync": "npm run build && npx cap sync android",
     "open": "npx cap open android",
-    "apk": "cd android && ./gradlew assembleDebug",
-    "release": "cd android && ./gradlew assembleRelease"
+    "apk:gradle": "npm run sync && cd android && ./gradlew assembleDebug",
+    "release:gradle": "npm run sync && cd android && ./gradlew assembleRelease"
   },
   "dependencies": {
     "@capacitor/android": "^6.2.1",

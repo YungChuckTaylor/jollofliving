@@ -9,39 +9,83 @@ never drift apart.
 ```
 mobile/
   src/            the app: screens, store, sprite engine, styles
-  tools/          build, sprite generator, icon generator, tests
-  android/        the Android Studio project (generated)
-  www/            the built bundle Capacitor puts in the APK
+  tools/          build, APK build, sprite generator, icon generator, tests
+  native/         the Android host: manifest, theme, MainActivity
+  android/        the Android Studio project (Capacitor)
+  ci/             a GitHub Actions workflow that builds the APK
+  dist/           the built, signed packages
+  www/            the built bundle that goes inside the APK
 ```
 
 ---
 
 ## Build the APK
 
-You need **Android Studio** (or a JDK 17 + the Android SDK) on your own
-machine. It could not be installed in the environment this was written in, so
-the final compile is the one step left for you.
-
 ```bash
 cd mobile
 npm install
-npm run sprites      # draw the animation sheets
-npm run build        # bundle the app into www/
-npx cap sync android # copy it into the Android project
-
-npx cap open android # opens Android Studio → press ▶ Run
+npm run apk            # dist/jollof-living-1.0.0-debug.apk
+npm run apk:release    # dist/jollof-living-1.0.0-release.apk
 ```
 
-Prefer the command line?
+That is the whole thing — no Android Studio, no Gradle, no Maven. The first run
+downloads a JDK 17 (`jdk4py` from PyPI) plus `aapt2`, `android.jar`, `d8` and
+`apksigner` (from npm) into `~/.cache/jollof-android-toolchain`, roughly 90 MB,
+and reuses them afterwards. If you already have a JDK or an Android SDK
+installed, those are used instead.
+
+`tools/build-apk.mjs` runs the same pipeline Gradle would:
+
+```
+tools/build.mjs   →  www/            the interface
+aapt2 compile     →  resources.zip   icons, splash, theme
+aapt2 link        →  linked/         manifest, resources.arsc, assets
+ecj / javac       →  classes/        MainActivity
+d8                →  classes.dex
+tools/apkzip.mjs  →  unsigned.apk    4-byte aligned zip
+apksigner         →  dist/*.apk      v1 + v2 + v3 signatures
+```
+
+Useful flags:
 
 ```bash
-cd android
-./gradlew assembleDebug
-# app/build/outputs/apk/debug/app-debug.apk
+npm run apk -- --api=https://your-domain.com/jollof/api/mobile/
+npm run apk -- --version-name=1.1 --version-code=2
+npm run apk -- --skip-web        # reuse the bundle already in www/
 ```
 
-For a Play Store build, `./gradlew bundleRelease` after setting up signing in
-`android/app/build.gradle`.
+Release signing reads `JL_KEYSTORE`, `JL_KEYSTORE_PASS`, `JL_KEY_ALIAS` and
+`JL_KEY_PASS`; with none of them set it creates a keystore in the toolchain
+cache and tells you where it put it. See `dist/README.md`.
+
+### The Android host
+
+`native/` holds the whole native side: an `AndroidManifest.xml`, a
+platform-only theme and one `MainActivity`. The activity serves the bundled
+interface to a WebView over **https://localhost** — the same origin a Capacitor
+build uses, which is what `api/mobile/_mobile.php` already allows in its CORS
+rules — and lets requests to your server through untouched. The hardware back
+button presses the app's own back arrow, so both routes behave identically.
+
+Because it compiles against `android.jar` alone, no androidx artifacts are
+needed; the Capacitor plugins fall back to their browser implementations
+(`Preferences` → localStorage, `Network` → `navigator.onLine`, `Haptics` →
+the Vibration API), which `tools/e2e/webview-smoke.mjs` checks on every build.
+
+### With Android Studio instead
+
+The Capacitor project in `android/` is still there and still works:
+
+```bash
+npm run sync         # build www/ and copy it into the Android project
+npx cap open android # Android Studio → press ▶ Run
+npm run apk:gradle   # or from the command line
+```
+
+That route needs the Android SDK and can reach Google's Maven repository. There
+is also `ci/build-jollof-apk.yml`: copy it to `.github/workflows/` and GitHub
+Actions will build the APK on demand, attach it to the run and, if you ask it
+to, commit it back under `mobile/dist/`.
 
 ### Point it at your server first
 
@@ -136,16 +180,24 @@ code is plain maths, so tweaking a colour or timing is a one-line change.
 ```bash
 node tools/e2e/build-test.mjs                    # test bundle
 node tools/e2e/app.mjs http://localhost:8080     # 49 checks
+node tools/e2e/webview-smoke.mjs                 # 12 checks, no server needed
 ```
 
-The suite boots the real bundled app in jsdom and drives it like a thumb —
+The first suite boots the real bundled app in jsdom and drives it like a thumb —
 taps, typing, screen changes — then checks the database actually changed and
 that the website agrees. It covers the onboarding animation advancing frames,
 opening offline from cache, signing up, booking end to end, the offline queue
 replaying exactly once, every owner tab, and a listing added on the phone
 reaching admin moderation and being approved.
 
-**49/49 passing**, alongside the website's 22 + 25 + 26.
+`webview-smoke.mjs` covers what only breaks once the app is packaged: it boots
+the *shipping* bundle — the exact code inside the APK, real `@capacitor/*`
+packages and no doubles — in a document served from `https://localhost`, then
+checks the plugins fall back to the browser without throwing, that Preferences
+still persists, that the cached copy paints with no network, and that the back
+arrow the hardware key presses is really on screen.
+
+**49/49 and 12/12 passing**, alongside the website's 22 + 25 + 26.
 
 ---
 
