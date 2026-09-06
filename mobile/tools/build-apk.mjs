@@ -210,11 +210,20 @@ let keyAlias = "androiddebugkey";
 let keyPass = "android";
 
 if (release) {
+  /* A release package's identity is its key: Android and Play both refuse an
+     update signed with a different one. Look for a real key first, keep the
+     generated fallback last. */
+  const projectKeystore = join(ROOT, "jollof-release.keystore");
   if (process.env.JL_KEYSTORE) {
     keystore = process.env.JL_KEYSTORE;
     storePass = process.env.JL_KEYSTORE_PASS || "";
     keyAlias = process.env.JL_KEY_ALIAS || "jollof";
     keyPass = process.env.JL_KEY_PASS || storePass;
+    done(`using ${keystore} (JL_KEYSTORE)`);
+  } else if (existsSync(projectKeystore)) {
+    keystore = projectKeystore;
+    storePass = keyPass = process.env.JL_KEYSTORE_PASS || "jollofliving";
+    keyAlias = process.env.JL_KEY_ALIAS || "jollof";
     done(`using ${keystore}`);
   } else {
     keystore = join(tc.cache, "jollof-release.keystore");
@@ -225,7 +234,8 @@ if (release) {
         "-keyalg", "RSA", "-keysize", "2048", "-validity", "10950",
         "-storepass", storePass, "-keypass", keyPass,
         "-dname", "CN=Jollof Living, OU=Mobile, O=Jollof Living, L=Lagos, C=NG"]);
-      done(`created ${keystore} — keep this file, updates must be signed with it`);
+      done(`created ${keystore}`);
+      done("copy it to mobile/jollof-release.keystore to keep signing updates with it");
     } else {
       done(`using ${keystore}`);
     }

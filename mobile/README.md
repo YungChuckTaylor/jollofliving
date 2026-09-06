@@ -54,9 +54,14 @@ npm run apk -- --version-name=1.1 --version-code=2
 npm run apk -- --skip-web        # reuse the bundle already in www/
 ```
 
-Release signing reads `JL_KEYSTORE`, `JL_KEYSTORE_PASS`, `JL_KEY_ALIAS` and
-`JL_KEY_PASS`; with none of them set it creates a keystore in the toolchain
-cache and tells you where it put it. See `dist/README.md`.
+Release signing looks for `JL_KEYSTORE` (with `JL_KEYSTORE_PASS`,
+`JL_KEY_ALIAS`, `JL_KEY_PASS`), then for `mobile/jollof-release.keystore`, and
+only then mints a throwaway key in the toolchain cache. Keep a real keystore in
+one of the first two places: Android ties every future update to the
+certificate the first install carried. See `dist/README.md`.
+
+The debug package is byte-for-byte reproducible — same sources in, same APK
+out — so two builds can be compared with `sha256sum`.
 
 ### The Android host
 

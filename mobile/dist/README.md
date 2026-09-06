@@ -20,8 +20,12 @@ Certificate fingerprints (SHA-256):
 
 ```
 debug     483f475dbcbac2caf73cfe0bf639a73cbceb16c4f39245babc048daec3c0fbf1
-release   214477511f74e9a631b4a182583c39beec5e5ee45a74bba4c4f6c3169c4c020f
+release   faa46c7c460e03bc271ee537062081012b9dd3cb330b85e44ff73cf9e860194c
 ```
+
+The debug package is reproducible: building it again from the same sources
+produces the same bytes (`sha256 bf55c0d4…`). The release package cannot be,
+because a signature is only ever as stable as its key — see below.
 
 ## Install it
 
@@ -66,8 +70,11 @@ Nothing else has to be installed: the build fetches its own JDK, aapt2, d8 and
 apksigner into `~/.cache/jollof-android-toolchain` the first time, and uses a
 local Android SDK instead when it finds one.
 
-**Release signing.** With no keystore configured the build creates one in that
-cache directory and reuses it. Google Play requires every update to carry the
+**Release signing.** The build signs with `JL_KEYSTORE` if it is set, then with
+`mobile/jollof-release.keystore` if that file exists, and only otherwise mints a
+throwaway key in the toolchain cache — so a release build made on a fresh
+machine carries a *different* certificate, and Android will refuse to install it
+over an earlier one until the old copy is uninstalled. Google Play requires every update to carry the
 same signature, so for anything you intend to publish, make your own key and
 point the build at it:
 
