@@ -23,7 +23,7 @@ export function owner() {
   if (!store.isSignedIn()) {
     return `<div class="screen">${emptyState("keys", "Owner dashboard",
       "Sign in with your owner account to manage listings, bookings and payouts.",
-      `<button class="btn btn-gold" data-go="auth">Sign in</button>`)}</div>`;
+      `<button class="btn btn-gold" data-go="auth" data-mode="signin">Sign in</button>`)}</div>`;
   }
   if (!store.isOwner()) {
     return `<div class="screen">${emptyState("building", "Start hosting",

@@ -8,7 +8,7 @@
 
 import * as store from "./store.js";
 import { S } from "./store.js";
-import { $, $$, esc, svg, toast, tap } from "./ui.js";
+import { $, $$, esc, svg, toast, tap, wordmark, logomark } from "./ui.js";
 import { spriteTag, mountAll, unmountAll } from "./sprites.js";
 import { go } from "./router.js";
 
@@ -27,6 +27,7 @@ const SLIDES = [
 
 export function onboarding() {
   return `<div class="onboard" id="onboard">
+    <div class="ob-brand">${wordmark(30)}</div>
     <div class="slides" id="slides">
       ${SLIDES.map((s) => `<section class="slide">
         ${spriteTag(s.sprite)}
@@ -78,13 +79,17 @@ let mode = "signin";
 let accountType = "customer";
 
 export function auth(params = {}) {
-  if (params.mode) mode = params.mode;
+  // The mode must follow the link that was tapped. Treating it as sticky
+  // module state meant "Sign in" reopened whatever screen was used last,
+  // so anyone who had glanced at Create account got sent back to it.
+  if (params.mode !== undefined) mode = params.mode === "register" ? "register" : "signin";
   const register = mode === "register";
 
   return `<div class="screen fade-in">
     <div style="text-align:center;margin:6px 0 18px">
-      ${spriteTag("keys", "sprite-sm")}
-      <h1 style="font-size:26px;margin-top:4px">${register ? "Create your account" : "Welcome back"}</h1>
+      ${logomark(104)}
+      <div class="rule-gold" style="margin:16px auto 14px"></div>
+      <h1 style="font-size:28px;margin-top:4px">${register ? "Create your account" : "Welcome back"}</h1>
       <p class="small">${register ? "Trips, wishlists and points — synced with the website." : "Sign in to pick up where you left off."}</p>
     </div>
 

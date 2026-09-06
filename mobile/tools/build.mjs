@@ -41,6 +41,8 @@ mkdirSync(OUT, { recursive: true });
 cpSync(`${SRC}/index.html`, `${OUT}/index.html`);
 cpSync(`${SRC}/css`, `${OUT}/css`, { recursive: true });
 cpSync(`${SRC}/sprites`, `${OUT}/sprites`, { recursive: true });
+cpSync(`${SRC}/fonts`, `${OUT}/fonts`, { recursive: true });   // Cormorant + Jost
+cpSync(`${SRC}/img`, `${OUT}/img`, { recursive: true });       // wordmark + logo
 
 const result = await build({
   entryPoints: [`${SRC}/js/app.js`],

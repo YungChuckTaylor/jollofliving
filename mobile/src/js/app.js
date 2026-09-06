@@ -9,7 +9,7 @@ import { StatusBar, Style } from "@capacitor/status-bar";
 
 import * as store from "./store.js";
 import { S } from "./store.js";
-import { $, $$, esc, svg, toast, tap } from "./ui.js";
+import { $, $$, esc, svg, wordmark, toast, tap } from "./ui.js";
 import { mountAll, unmountAll } from "./sprites.js";
 import * as R from "./router.js";
 import * as G from "./screens-guest.js";
@@ -57,7 +57,9 @@ function render() {
   app.innerHTML = `
     ${(title || canBack) ? `<header class="appbar">
       ${canBack ? `<button class="back" id="navBack" aria-label="Back">${svg("back")}</button>` : ""}
-      <h1>${esc(title || "")}</h1>
+      ${name === "home" && !canBack
+        ? `<div class="brand-slot">${wordmark(24)}</div>`
+        : `<h1>${esc(title || "")}</h1>`}
       ${screen.root ? `<button class="act" data-go="notifications" aria-label="Notifications">
           ${svg("bell")}${store.unreadNotifs() ? `<span class="dot" style="top:4px;right:4px">${store.unreadNotifs()}</span>` : ""}
         </button>` : ""}
@@ -113,7 +115,7 @@ function wire(app, view, params) {
   /* Wishlist heart: flips instantly, then reconciles with the server. */
   $$("[data-wish]", app).forEach((el) => el.addEventListener("click", async (e) => {
     e.stopPropagation();
-    if (!store.isSignedIn()) { R.go("auth"); return; }
+    if (!store.isSignedIn()) { R.go("auth", { mode: "signin" }); return; }
     const slug = el.dataset.wish;
     const turningOn = !el.classList.contains("on");
     el.classList.toggle("on", turningOn);
@@ -188,8 +190,10 @@ function paintOffline() {
 }
 
 async function boot() {
-  try { await StatusBar.setStyle({ style: Style.Dark }); } catch {}
-  try { await StatusBar.setBackgroundColor({ color: "#0B0F0C" }); } catch {}
+  // Style.Light means dark icons on a light bar — correct now the app
+  // uses the website's ivory background.
+  try { await StatusBar.setStyle({ style: Style.Light }); } catch {}
+  try { await StatusBar.setBackgroundColor({ color: "#f6f2e9" }); } catch {}
 
   await store.hydrate();
   store.onChange(paintOffline);

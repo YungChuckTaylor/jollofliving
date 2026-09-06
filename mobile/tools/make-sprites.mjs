@@ -17,12 +17,15 @@ const OUT = resolve(dirname(fileURLToPath(import.meta.url)), "../src/sprites");
 mkdirSync(OUT, { recursive: true });
 
 /* ---------------------------------------------------- brand palette */
-const GOLD = [201, 162, 39];
-const GOLD_SOFT = [226, 196, 106];
-const GREEN = [26, 61, 42];
-const GREEN_DEEP = [11, 15, 12];
-const CREAM = [245, 240, 227];
-const WHITE = [255, 255, 255];
+/* Palette matches the website's light theme (src_php/styles.css).
+   The sheets sit on ivory, so the "light" inks are now dark: what used
+   to be cream/white strokes would otherwise be invisible on #f6f2e9. */
+const GOLD = [201, 162, 39];        // --gold-1
+const GOLD_SOFT = [169, 126, 47];   // --gold-2, reads on ivory
+const GREEN = [15, 46, 36];         // --green
+const GREEN_DEEP = [27, 74, 56];    // --green-2
+const CREAM = [25, 22, 18];         // --ink
+const WHITE = [99, 93, 79];         // --ink-soft
 
 const TAU = Math.PI * 2;
 const lerp = (a, b, t) => a + (b - a) * t;

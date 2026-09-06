@@ -166,11 +166,9 @@ export function stay(params) {
   const reviews = (S.catalogue.reviews || []).filter((r) => r.property === p.id || r.propertySlug === p.id).slice(0, 3);
 
   return `<div class="screen flush fade-in">
-    <div style="position:relative">
+    <div class="stay hero-ph" style="position:relative;border-radius:0;border:0;box-shadow:none">
       <img src="${imgUrl(p.img)}" alt="${esc(p.name)}" style="width:100%;aspect-ratio:4/3;object-fit:cover">
-      <button class="heart ${wished ? "on" : ""}" data-wish="${esc(p.id)}"
-        style="position:absolute;top:12px;right:12px;width:42px;height:42px;border-radius:50%;
-               background:rgba(11,15,12,.62);backdrop-filter:blur(6px);display:grid;place-items:center">
+      <button class="heart ${wished ? "on" : ""}" data-wish="${esc(p.id)}" aria-label="Save">
         ${svg("heart")}
       </button>
     </div>
@@ -283,7 +281,7 @@ export function bindBooking(root, params) {
 
   $("#bGo", root)?.addEventListener("click", async (e) => {
     const btn = e.currentTarget;
-    if (!store.isSignedIn()) { go("auth", { next: "booking", slug: p.id }); return; }
+    if (!store.isSignedIn()) { go("auth", { mode: "signin", next: "booking", slug: p.id }); return; }
     btn.disabled = true; btn.textContent = "Sending…";
     tap();
     const r = await store.act({
@@ -448,7 +446,7 @@ export function messages() {
 function signInWall(title, body) {
   return `<div class="screen">${emptyState("keys", title, body,
     `<div class="stack" style="width:100%;max-width:300px">
-       <button class="btn btn-gold btn-block" data-go="auth">Sign in</button>
+       <button class="btn btn-gold btn-block" data-go="auth" data-mode="signin">Sign in</button>
        <button class="btn btn-ghost btn-block" data-go="auth" data-mode="register">Create an account</button>
      </div>`)}</div>`;
 }

@@ -7,11 +7,12 @@
      node tools/make-icons.mjs
    ============================================================ */
 import { PNG } from "pngjs";
-import { mkdirSync, writeFileSync, existsSync } from "node:fs";
+import { mkdirSync, writeFileSync, existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const SRC_IMG = `${ROOT}/src/img`;
 const RES = `${ROOT}/android/app/src/main/res`;
 if (!existsSync(RES)) {
   console.error("Run `npx cap add android` first — no res/ folder yet.");
@@ -114,6 +115,29 @@ for (const [dpi, px] of LAUNCHER) {
   console.log(`  ${dpi.padEnd(8)} ${px}×${px}`);
 }
 
+/* Splash: the real wordmark lockup, not a drawn substitute. The
+   launcher icon has to survive being 48px and masked to a circle, so it
+   stays the key emblem; a splash screen is big enough for the actual
+   logo, which is what people recognise from the website. */
+function loadLogo() {
+  const src = PNG.sync.read(readFileSync(`${SRC_IMG}/logo-dark.png`));
+  return { w: src.width, h: src.height, d: src.data };
+}
+function drawLogo(c, logo, targetW, ox, oy) {
+  const scale = targetW / logo.w;
+  const th = Math.round(logo.h * scale);
+  for (let y = 0; y < th; y++) {
+    for (let x = 0; x < targetW; x++) {
+      const sx = Math.min(logo.w - 1, Math.floor(x / scale));
+      const sy = Math.min(logo.h - 1, Math.floor(y / scale));
+      const i = (sy * logo.w + sx) * 4;
+      const a = logo.d[i + 3] / 255;
+      if (a > 0.01) blend(c, x + ox, y + oy, [logo.d[i], logo.d[i + 1], logo.d[i + 2]], a);
+    }
+  }
+  return th;
+}
+
 /* Splash: the mark centred on the brand background. */
 const SPLASH = [
   ["drawable", 480, 800], ["drawable-port-mdpi", 320, 480], ["drawable-port-hdpi", 480, 800],
@@ -121,18 +145,13 @@ const SPLASH = [
   ["drawable-land-mdpi", 480, 320], ["drawable-land-hdpi", 800, 480], ["drawable-land-xhdpi", 1280, 720],
   ["drawable-land-xxhdpi", 1600, 960], ["drawable-land-xxxhdpi", 1920, 1280],
 ];
+const LOGO = loadLogo();
 console.log("Splash screens");
 for (const [dir, w, h] of SPLASH) {
   const c = canvas(w, h, BG);
-  const size = Math.round(Math.min(w, h) * 0.34);
-  const m = mark(size, false);
-  const ox = Math.round((w - size) / 2), oy = Math.round((h - size) / 2);
-  for (let y = 0; y < m.h; y++)
-    for (let x = 0; x < m.w; x++) {
-      const s = (y * m.w + x) * 4;
-      const bright = m.d[s] + m.d[s + 1] + m.d[s + 2];
-      if (bright > 60) blend(c, x + ox, y + oy, [m.d[s], m.d[s + 1], m.d[s + 2]], 1);
-    }
+  const targetW = Math.round(Math.min(w, h) * 0.52);
+  const th = Math.round(LOGO.h * (targetW / LOGO.w));
+  drawLogo(c, LOGO, targetW, Math.round((w - targetW) / 2), Math.round((h - th) / 2));
   save(c, `${RES}/${dir}/splash.png`);
 }
 console.log(`  ${SPLASH.length} sizes`);
