@@ -23,6 +23,7 @@ const GOLD = [201, 162, 39];
 const GOLD_SOFT = [226, 196, 106];
 const BG = [11, 15, 12];
 const GREEN = [26, 61, 42];
+const CREAM = [247, 243, 232];
 const clamp01 = (t) => Math.max(0, Math.min(1, t));
 
 function canvas(w, h, bg) {
@@ -68,9 +69,75 @@ function save(c, path) {
   writeFileSync(path, PNG.sync.write(png));
 }
 
-/* The mark: a gold key inside a ring — the same motif as the
-   onboarding "unlock" sprite, so app icon and first screen agree. */
-function mark(size, withBackground = true) {
+/* ---------------------------------------------------------------- art
+
+   The launcher icon is the Jollof Living wordmark. Two details matter
+   at icon sizes and both are easy to get wrong:
+
+   - Downscaling by point-sampling shatters a fine serif face. Every
+     source pixel in the footprint is averaged instead (`drawArt`).
+   - Averaging then makes hairline strokes translucent and grey, so the
+     coverage is gamma-boosted to keep the letterforms solid cream.
+
+   The full logo lockup is deliberately not used here: its "PREMIUM
+   RESIDENCES" line is illegible below about 96px. The lockup still
+   appears on the splash screen, where there is room for it. */
+
+let _artCache = null;
+function art(file) {
+  if (_artCache && _artCache.file === file) return _artCache;
+  const src = PNG.sync.read(readFileSync(`${SRC_IMG}/${file}`));
+  let x0 = src.width, y0 = src.height, x1 = 0, y1 = 0;
+  for (let y = 0; y < src.height; y++) {
+    for (let x = 0; x < src.width; x++) {
+      if (src.data[((y * src.width + x) << 2) + 3] > 12) {
+        if (x < x0) x0 = x; if (x > x1) x1 = x;
+        if (y < y0) y0 = y; if (y > y1) y1 = y;
+      }
+    }
+  }
+  _artCache = { file, src, x0, y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
+  return _artCache;
+}
+
+function drawArt(c, a, targetW, ox, oy, { gamma = 0.6, colour = CREAM } = {}) {
+  const scale = targetW / a.w;
+  const th = Math.round(a.h * scale);
+  const step = 1 / scale;
+  for (let y = 0; y < th; y++) {
+    for (let x = 0; x < targetW; x++) {
+      let sum = 0, n = 0;
+      const sx0 = a.x0 + x * step, sy0 = a.y0 + y * step;
+      for (let sy = Math.floor(sy0); sy < Math.min(a.y0 + a.h, sy0 + step); sy++) {
+        for (let sx = Math.floor(sx0); sx < Math.min(a.x0 + a.w, sx0 + step); sx++) {
+          sum += a.src.data[((sy * a.src.width + sx) << 2) + 3] / 255;
+          n++;
+        }
+      }
+      if (!n) continue;
+      let alpha = sum / n;
+      if (alpha <= 0.004) continue;
+      blend(c, x + ox, y + oy, colour, Math.min(1, Math.pow(alpha, gamma)));
+    }
+  }
+  return th;
+}
+
+/* The wordmark on the brand tile. `fill` is the share of the width the
+   art occupies; adaptive foregrounds need a smaller one because the
+   launcher masks the outer third away. */
+function mark(size, fill = 0.74) {
+  const c = canvas(size, size, BG);
+  disc(c, size / 2, size / 2, size * 0.48, GREEN, 0.55);
+  const a = art("wordmark-dark.png");
+  const tw = Math.round(size * fill);
+  const th = Math.round(a.h * (tw / a.w));
+  drawArt(c, a, tw, Math.round((size - tw) / 2), Math.round((size - th) / 2));
+  return c;
+}
+
+/* The old drawn key, kept for reference. */
+function keyMark(size, withBackground = true) {
   const c = canvas(size, size, withBackground ? BG : BG);
   const s = size / 192;
   const cx = size / 2, cy = size / 2;
@@ -96,21 +163,23 @@ function mark(size, withBackground = true) {
 const LAUNCHER = [["mdpi", 48], ["hdpi", 72], ["xhdpi", 96], ["xxhdpi", 144], ["xxxhdpi", 192]];
 console.log("Launcher icons");
 for (const [dpi, px] of LAUNCHER) {
+  // Legacy square/round icon: the tile is ours to fill.
   const c = mark(px);
   save(c, `${RES}/mipmap-${dpi}/ic_launcher.png`);
   save(c, `${RES}/mipmap-${dpi}/ic_launcher_round.png`);
-  // Adaptive foreground needs generous padding — the system masks it.
-  const fg = canvas(px * 2, px * 2, BG);
-  const inner = mark(px * 2 * 0.62, false);
-  const off = (px * 2 - inner.w) / 2;
-  for (let y = 0; y < inner.h; y++)
-    for (let x = 0; x < inner.w; x++) {
-      const s = (y * inner.w + x) * 4;
-      if (inner.d[s + 3]) {
-        const near = inner.d[s] + inner.d[s + 1] + inner.d[s + 2];
-        if (near > 60) blend(fg, x + off, y + off, [inner.d[s], inner.d[s + 1], inner.d[s + 2]], 1);
-      }
-    }
+
+  // Adaptive foreground. The launcher keeps only the middle ~66 of 108
+  // units and animates within that, so the wordmark is drawn small and
+  // centred on a transparent canvas — the background layer supplies the
+  // colour. Drawing it straight avoids the old brightness-threshold copy,
+  // which chewed the antialiasing off the serifs.
+  const fgSize = px * 2;
+  const fg = canvas(fgSize, fgSize, BG);
+  for (let i = 3; i < fg.d.length; i += 4) fg.d[i] = 0;   // transparent
+  const a = art("wordmark-dark.png");
+  const tw = Math.round(fgSize * 0.52);
+  const th = Math.round(a.h * (tw / a.w));
+  drawArt(fg, a, tw, Math.round((fgSize - tw) / 2), Math.round((fgSize - th) / 2));
   save(fg, `${RES}/mipmap-${dpi}/ic_launcher_foreground.png`);
   console.log(`  ${dpi.padEnd(8)} ${px}×${px}`);
 }
@@ -171,7 +240,7 @@ mkdirSync(`${RES}/values`, { recursive: true });
 writeFileSync(`${RES}/values/ic_launcher_background.xml`,
 `<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#0B0F0C</color>
+    <color name="ic_launcher_background">#13281C</color>
 </resources>
 `);
 console.log("\nBranding written.");
