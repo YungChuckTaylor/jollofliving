@@ -9,6 +9,12 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 import os
 
+# Built-in Times/Helvetica lack U+20A6 (₦). DejaVu covers Naira.
+_FONTDIR = "/usr/share/fonts/truetype/dejavu"
+pdfmetrics.registerFont(TTFont("Body", os.path.join(_FONTDIR, "DejaVuSerif.ttf")))
+pdfmetrics.registerFont(TTFont("Body-Bold", os.path.join(_FONTDIR, "DejaVuSerif-Bold.ttf")))
+pdfmetrics.registerFont(TTFont("Body-Italic", os.path.join(_FONTDIR, "DejaVuSans.ttf")))
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "docs", "Jollof-Living-Investor-Financial-Projections.pdf")
 COVER = os.path.join(ROOT, "docs", "investor-cover.jpg")
@@ -67,25 +73,25 @@ class Deck:
         self.c.setLineWidth(0.4)
         self.c.line(MARGIN, 12 * mm, W - MARGIN, 12 * mm)
         self.c.setFillColor(MUTED)
-        self.c.setFont("Times-Italic", 7.5)
+        self.c.setFont("Body-Italic", 7.5)
         self.c.drawString(MARGIN, 7.5 * mm, "Jollof Living  ·  Confidential  ·  Investor discussion materials  ·  September 2026")
-        self.c.setFont("Times-Roman", 7.5)
+        self.c.setFont("Body", 7.5)
         self.c.drawRightString(W - MARGIN, 7.5 * mm, str(self.page))
 
     def header(self, kicker, title, sub=None):
         self.c.setFillColor(GOLD)
-        self.c.setFont("Times-Italic", 8)
+        self.c.setFont("Body-Italic", 8)
         self.c.drawString(MARGIN, H - 16 * mm, kicker.upper())
         self.c.setStrokeColor(GOLD)
         self.c.setLineWidth(0.6)
         self.c.line(MARGIN, H - 17.5 * mm, MARGIN + 22 * mm, H - 17.5 * mm)
         self.c.setFillColor(INK)
-        self.c.setFont("Times-Bold", 20)
+        self.c.setFont("Body-Bold", 20)
         self.c.drawString(MARGIN, H - 28 * mm, title)
         y = H - 34 * mm
         if sub:
             self.c.setFillColor(MUTED)
-            self.c.setFont("Times-Italic", 10)
+            self.c.setFont("Body-Italic", 10)
             for line in sub:
                 self.c.drawString(MARGIN, y, line)
                 y -= 4.2 * mm
@@ -113,7 +119,7 @@ class Deck:
             lines.append(cur)
         return lines
 
-    def para(self, x, y, text, maxw, size=9, leading=12, color=None, font="Times-Roman"):
+    def para(self, x, y, text, maxw, size=9, leading=12, color=None, font="Body"):
         self.c.setFillColor(color or MUTED)
         self.c.setFont(font, size)
         lines = self.wrap(text, font, size, maxw)
@@ -132,14 +138,14 @@ class Deck:
     def kpi(self, x, y, w, h, label, value, note=""):
         self.card(x, y, w, h)
         self.c.setFillColor(GOLD)
-        self.c.setFont("Times-Italic", 7.5)
+        self.c.setFont("Body-Italic", 7.5)
         self.c.drawString(x + 8, y + h - 14, label.upper())
         self.c.setFillColor(INK)
-        self.c.setFont("Times-Bold", 14)
+        self.c.setFont("Body-Bold", 14)
         self.c.drawString(x + 8, y + h - 32, value)
         if note:
             self.c.setFillColor(MUTED)
-            self.c.setFont("Times-Roman", 7.5)
+            self.c.setFont("Body", 7.5)
             self.c.drawString(x + 8, y + 10, note)
 
     def table(self, x, y, cols, rows, colw, row_h=16, header=True):
@@ -151,7 +157,7 @@ class Deck:
             self.c.setFillColor(HexColor("#1f231c"))
             self.c.rect(x, y - row_h + 4, tw, row_h, fill=1, stroke=0)
             self.c.setFillColor(GOLD)
-            self.c.setFont("Times-Bold", 7.5)
+            self.c.setFont("Body-Bold", 7.5)
             cx = x
             for i, (t, a) in enumerate(cols):
                 if a == "R":
@@ -160,7 +166,7 @@ class Deck:
                     self.c.drawString(cx + 6, y - 6, t)
                 cx += colw[i]
             y -= row_h
-        self.c.setFont("Times-Roman", 8)
+        self.c.setFont("Body", 8)
         for r, row in enumerate(rows):
             if r % 2 == 0:
                 self.c.setFillColor(HexColor("#151814"))
@@ -170,9 +176,9 @@ class Deck:
                 a = cols[i][1]
                 self.c.setFillColor(INK if i == 0 else MUTED)
                 if i == 0:
-                    self.c.setFont("Times-Bold" if str(cell).startswith("Total") or str(cell).startswith("EBITDA") or str(cell).startswith("Net ") else "Times-Roman", 8)
+                    self.c.setFont("Body-Bold" if str(cell).startswith("Total") or str(cell).startswith("EBITDA") or str(cell).startswith("Net ") else "Body", 8)
                 else:
-                    self.c.setFont("Times-Roman", 8)
+                    self.c.setFont("Body", 8)
                 if a == "R":
                     self.c.setFillColor(INK)
                     self.c.drawRightString(cx + colw[i] - 6, y - 6, str(cell))
@@ -204,28 +210,28 @@ def build():
     c.setFillColor(Color(0.04, 0.05, 0.04, alpha=0.62))
     c.rect(0, 0, W, H, fill=1, stroke=0)
     c.setFillColor(GOLD)
-    c.setFont("Times-Italic", 10)
+    c.setFont("Body-Italic", 10)
     c.drawString(MARGIN, H - 28 * mm, "CONFIDENTIAL  ·  INVESTOR DISCUSSION MATERIALS")
     c.setStrokeColor(GOLD)
     c.setLineWidth(0.7)
     c.line(MARGIN, H - 30 * mm, MARGIN + 38 * mm, H - 30 * mm)
     c.setFillColor(INK)
-    c.setFont("Times-Bold", 36)
+    c.setFont("Body-Bold", 36)
     c.drawString(MARGIN, H - 52 * mm, "Jollof Living")
     c.setFillColor(GOLD2)
-    c.setFont("Times-Italic", 16)
+    c.setFont("Body-Italic", 16)
     c.drawString(MARGIN, H - 62 * mm, "Luxury Living, African Soul")
     c.setFillColor(INK)
-    c.setFont("Times-Roman", 13)
+    c.setFont("Body", 13)
     c.drawString(MARGIN, 58 * mm, "Three-, five- and ten-year")
-    c.setFont("Times-Bold", 18)
+    c.setFont("Body-Bold", 18)
     c.drawString(MARGIN, 49 * mm, "Financial projections")
     c.setFillColor(MUTED)
-    c.setFont("Times-Roman", 9)
+    c.setFont("Body", 9)
     c.drawString(MARGIN, 38 * mm, "Marketplace  ·  Lagos & Abuja, then West Africa")
     c.drawString(MARGIN, 33 * mm, "September 2026  ·  Figures in Nigerian Naira  ·  USD at ₦1,600")
     c.setFillColor(GOLD)
-    c.setFont("Times-Italic", 8)
+    c.setFont("Body-Italic", 8)
     c.drawString(MARGIN, 22 * mm, "Not an offer to sell securities. Forward-looking estimates only.")
 
     # ========== DISCLAIMER / TOC ==========
@@ -244,7 +250,7 @@ def build():
     )
     y -= 8 * mm
     c.setFillColor(INK)
-    c.setFont("Times-Bold", 12)
+    c.setFont("Body-Bold", 12)
     c.drawString(MARGIN, y, "Supply targets used in this pack (per instruction)")
     y -= 6 * mm
     box_w = (W - 2 * MARGIN - 10 * mm) / 3
@@ -263,7 +269,7 @@ def build():
     )
     y -= 8 * mm
     c.setFillColor(INK)
-    c.setFont("Times-Bold", 12)
+    c.setFont("Body-Bold", 12)
     c.drawString(MARGIN, y, "Contents")
     y -= 7 * mm
     toc = [
@@ -279,7 +285,7 @@ def build():
         c.setFillColor(GOLD)
         c.circle(MARGIN + 2, y + 2, 1.2, fill=1, stroke=0)
         c.setFillColor(MUTED)
-        c.setFont("Times-Roman", 10)
+        c.setFont("Body", 10)
         c.drawString(MARGIN + 8, y, t)
         y -= 6 * mm
 
@@ -295,7 +301,7 @@ def build():
     ]
     for title, body in bullets:
         c.setFillColor(GOLD)
-        c.setFont("Times-Bold", 10)
+        c.setFont("Body-Bold", 10)
         c.drawString(MARGIN, y, title)
         y -= 5 * mm
         y = d.para(MARGIN, y, body, W - 2 * MARGIN, 9, 12)
@@ -303,7 +309,7 @@ def build():
 
     y -= 2 * mm
     c.setFillColor(INK)
-    c.setFont("Times-Bold", 11)
+    c.setFont("Body-Bold", 11)
     c.drawString(MARGIN, y, "Base-case snapshot")
     y -= 4 * mm
     cols = [(" ", "L"), ("Year 3", "R"), ("Year 5", "R"), ("Year 10", "R")]
@@ -351,7 +357,7 @@ def build():
     )
     y -= 7 * mm
     c.setFillColor(INK)
-    c.setFont("Times-Bold", 11)
+    c.setFont("Body-Bold", 11)
     c.drawString(MARGIN, y, "Revenue stack")
     y -= 5 * mm
     mix = [
@@ -363,10 +369,10 @@ def build():
     ]
     for t, b in mix:
         c.setFillColor(GOLD)
-        c.setFont("Times-Bold", 9)
+        c.setFont("Body-Bold", 9)
         c.drawString(MARGIN, y, t)
         c.setFillColor(MUTED)
-        c.setFont("Times-Roman", 9)
+        c.setFont("Body", 9)
         c.drawString(MARGIN + 52 * mm, y, b)
         y -= 5.5 * mm
 
@@ -410,7 +416,7 @@ def build():
     )
     y -= 6 * mm
     c.setFillColor(INK)
-    c.setFont("Times-Bold", 11)
+    c.setFont("Body-Bold", 11)
     c.drawString(MARGIN, y, "Y3 P&L (base, ₦ million)")
     y -= 4 * mm
     cols = [(" ", "L"), ("Amount", "R"), ("% net rev.", "R")]
@@ -509,7 +515,7 @@ def build():
     )
     y -= 6 * mm
     c.setFillColor(INK)
-    c.setFont("Times-Bold", 11)
+    c.setFont("Body-Bold", 11)
     c.drawString(MARGIN, y, "Illustrative enterprise value (not an offer)")
     y -= 4 * mm
     cols = [("", "L"), ("Y3", "R"), ("Y5", "R"), ("Y10", "R")]
@@ -532,7 +538,7 @@ def build():
     d.new()
     y = d.header("07  /  Scenarios, cash and capital", "Range, float and use of funds")
     c.setFillColor(INK)
-    c.setFont("Times-Bold", 11)
+    c.setFont("Body-Bold", 11)
     c.drawString(MARGIN, y, "Horizon exits")
     y -= 4 * mm
     cols = [("", "L"), ("Conservative", "R"), ("Base", "R"), ("Upside", "R")]
@@ -548,7 +554,7 @@ def build():
     y = d.table(MARGIN, y, cols, rows, colw, 14.5)
     y -= 8 * mm
     c.setFillColor(INK)
-    c.setFont("Times-Bold", 11)
+    c.setFont("Body-Bold", 11)
     c.drawString(MARGIN, y, "Capital plan (base)")
     y -= 5 * mm
     y = d.para(
@@ -558,7 +564,7 @@ def build():
     )
     y -= 6 * mm
     c.setFillColor(INK)
-    c.setFont("Times-Bold", 11)
+    c.setFont("Body-Bold", 11)
     c.drawString(MARGIN, y, "Use of Series A (illustrative)")
     y -= 4 * mm
     cols = [("Use", "L"), ("₦bn", "R"), ("Why", "L")]
@@ -594,7 +600,7 @@ def build():
     ]
     for t, b in risks:
         c.setFillColor(GOLD)
-        c.setFont("Times-Bold", 9)
+        c.setFont("Body-Bold", 9)
         c.drawString(MARGIN, y, t)
         y -= 4.4 * mm
         y = d.para(MARGIN, y, b, W - 2 * MARGIN, 9, 11.5)
@@ -602,7 +608,7 @@ def build():
 
     y -= 2 * mm
     c.setFillColor(INK)
-    c.setFont("Times-Bold", 11)
+    c.setFont("Body-Bold", 11)
     c.drawString(MARGIN, y, "Milestones")
     y -= 5 * mm
     miles = [
@@ -613,10 +619,10 @@ def build():
     ]
     for t, b in miles:
         c.setFillColor(GOLD)
-        c.setFont("Times-Bold", 9)
+        c.setFont("Body-Bold", 9)
         c.drawString(MARGIN, y, t)
         c.setFillColor(MUTED)
-        c.setFont("Times-Roman", 9)
+        c.setFont("Body", 9)
         d.para(MARGIN + 22 * mm, y, b, W - 2 * MARGIN - 22 * mm, 9, 11.5)
         y -= 9 * mm
 
@@ -632,11 +638,11 @@ def build():
     c.line(MARGIN, y, MARGIN + 28 * mm, y)
     y -= 8 * mm
     c.setFillColor(INK)
-    c.setFont("Times-Italic", 12)
+    c.setFont("Body-Italic", 12)
     c.drawString(MARGIN, y, "Luxury Living, African Soul")
     y -= 6 * mm
     c.setFillColor(MUTED)
-    c.setFont("Times-Roman", 8)
+    c.setFont("Body", 8)
     c.drawString(MARGIN, y, "Jollof Living  ·  September 2026  ·  For authorised counterparties only.")
 
     d.save()
