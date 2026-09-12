@@ -13,21 +13,20 @@
   src:url(../fonts/jost-normal.woff2) format('woff2')}
 
 :root{
-  /* Ivory / deep forest / gold — identical values to the website's
-     light theme in src_php/styles.css. */
-  --bg:#f6f2e9; --bg-2:#fdfbf5; --bg-3:#efe9db;
-  --card:#ffffff; --card-2:#faf7ef;
-  --line:#e2dac7; --line-soft:#ece5d4;
-  --ink:#191612; --ink-soft:#635d4f; --ink-faint:#8d8574;
-  --green:#0f2e24; --green-2:#1b4a38; --green-ink:#e8efe6;
-  --green-soft:rgba(15,46,36,.08);
-  --gold:#c9a227; --gold-2:#a97e2f; --gold-soft:#e3c56b;
+  /* Dark theme — mirrors website's [data-theme=\"dark\"] */
+  --bg:#0a100d; --bg-2:#0f1713; --bg-3:#141d18;
+  --card:#121a16; --card-2:#16201b;
+  --line:#26322b; --line-soft:#1d2721;
+  --ink:#f2ecdd; --ink-soft:#a8b0a2; --ink-faint:#6f7a6e;
+  --green:#12372a; --green-2:#1d4a37; --green-ink:#eaf2e8;
+  --green-soft:rgba(18,55,42,.35);
+  --gold:#d4af5e; --gold-2:#c9a227; --gold-soft:#e3c56b;
   --gold-grad:linear-gradient(120deg,#e3c56b 0%,#c9a227 38%,#a97e2f 72%,#d9b95c 100%);
-  --accent:#a97e2f;
-  --chip:#f1ead9;
-  --ok:#2e7d4f; --warn:#a97e2f; --bad:#b4443a;
-  --shadow-sm:0 2px 10px rgba(30,24,10,.07);
-  --shadow-md:0 12px 34px rgba(30,24,10,.12);
+  --accent:#d4af5e;
+  --chip:#1c2620;
+  --ok:#5fbf8a; --warn:#d4af5e; --bad:#e0786d;
+  --shadow-sm:0 2px 12px rgba(0,0,0,.45);
+  --shadow-md:0 14px 40px rgba(0,0,0,.55);
   --r-s:10px; --r-m:16px; --r-l:24px; --r-xl:32px;
   --ease:cubic-bezier(.22,.61,.36,1);
   --header-h:60px; --tabbar-h:64px;
@@ -60,7 +59,7 @@ h1,h2,h3,h4{margin:0;font-family:var(--fs-serif);font-weight:600;line-height:1.1
   position:sticky;top:0;z-index:40;
   padding:calc(var(--safe-top) + 10px) 16px 10px;
   display:flex;align-items:center;gap:12px;
-  background:rgba(253,251,245,.86);backdrop-filter:blur(14px);
+  background:rgba(15,23,19,.82);backdrop-filter:blur(14px);
   border-bottom:1px solid var(--line-soft);
 }
 .appbar h1{font-size:19px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -76,7 +75,7 @@ h1,h2,h3,h4{margin:0;font-family:var(--fs-serif);font-weight:600;line-height:1.1
   position:fixed;left:0;right:0;bottom:0;z-index:50;
   display:grid;grid-template-columns:repeat(5,1fr);
   padding-bottom:var(--safe-bottom);
-  background:rgba(253,251,245,.92);backdrop-filter:blur(16px);
+  background:rgba(15,23,19,.92);backdrop-filter:blur(16px);
   border-top:1px solid var(--line);
 }
 .tabbar button{
@@ -161,6 +160,7 @@ h1,h2,h3,h4{margin:0;font-family:var(--fs-serif);font-weight:600;line-height:1.1
 .stay .body{padding:12px 13px 14px}
 .stay .body h3{font-size:18px;line-height:1.2}
 .stay .meta{display:flex;align-items:center;gap:6px;margin-top:4px;font-size:12.5px;color:var(--ink-faint)}
+.stay .meta svg{width:13px;height:13px;flex-shrink:0;stroke-width:1.7}
 .stay .price{margin-top:9px;font-size:15px}
 .stay .price b{color:var(--gold);font-size:16.5px}
 .stay-row{display:flex;gap:12px;padding:11px;align-items:center}
@@ -240,3 +240,30 @@ select.inp{appearance:none}
 /* the website's thin gold rule, used under headings */
 .rule-gold{width:64px;height:1px;background:var(--gold-grad);opacity:.85}
 .onboard .ob-brand{padding:calc(var(--safe-top) + 18px) 0 0;display:flex;justify-content:center;flex:0 0 auto}
+
+/* ------------------------------------------------------ icon fixes */
+/* Location and inline icons were rendering too large because svg() outputs
+   no width/height and the browser defaults to 24px+. Constrain them to
+   the text size they sit beside. */
+.stay .meta svg,
+.row.small svg,
+.row .badge svg,
+.badge svg,
+.small svg,
+.panel .badge svg,
+.krow svg,
+.spread svg{
+  width:13px;height:13px;flex-shrink:0;stroke-width:1.7;
+}
+.sec-head svg,
+.sec-head .small svg{width:13px;height:13px}
+.row svg{width:14px;height:14px}
+
+/* ------------------------------------------------------ dark polish */
+body{background:var(--bg);color:var(--ink)}
+#toast{background:var(--card-2);border-color:var(--line);color:var(--ink)}
+.inp{background:var(--card-2);border-color:var(--line);color:var(--ink)}
+.inp::placeholder{color:var(--ink-faint)}
+.card,.panel,.kpi{border-color:var(--line-soft)}
+.chip{background:var(--card);border-color:var(--line)}
+

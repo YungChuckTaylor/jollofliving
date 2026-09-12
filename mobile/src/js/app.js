@@ -190,10 +190,9 @@ function paintOffline() {
 }
 
 async function boot() {
-  // Style.Light means dark icons on a light bar — correct now the app
-  // uses the website's ivory background.
-  try { await StatusBar.setStyle({ style: Style.Light }); } catch {}
-  try { await StatusBar.setBackgroundColor({ color: "#f6f2e9" }); } catch {}
+  // Dark theme — mirrors website's dark mode.
+  try { await StatusBar.setStyle({ style: Style.Dark }); } catch {}
+  try { await StatusBar.setBackgroundColor({ color: "#0a100d" }); } catch {}
 
   await store.hydrate();
   store.onChange(paintOffline);

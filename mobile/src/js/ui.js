@@ -48,9 +48,9 @@ export const svg = (name, cls = "") =>
    wordmark = the "Jollof living" lockup; logo = it plus the rule
    and PREMIUM RESIDENCES line, for bigger moments. */
 export const wordmark = (h = 26, cls = "") =>
-  `<img class="brand-mark ${cls}" src="img/wordmark-light.png" alt="Jollof Living" style="height:${h}px;width:auto;margin:0 auto">`;
+  `<img class="brand-mark ${cls}" src="img/wordmark-dark.png" alt="Jollof Living" style="height:${h}px;width:auto;margin:0 auto">`;
 export const logomark = (h = 96, cls = "") =>
-  `<img class="brand-mark ${cls}" src="img/logo-light.png" alt="Jollof Living" style="height:${h}px;width:auto;margin:0 auto">`;
+  `<img class="brand-mark ${cls}" src="img/logo-dark.png" alt="Jollof Living" style="height:${h}px;width:auto;margin:0 auto">`;
 
 export function imgUrl(key) {
   if (!key) return CONFIG.imageBase + "p1.jpg";
