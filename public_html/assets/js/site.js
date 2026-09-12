@@ -3744,5 +3744,5 @@ function observeReveals() {
 
 /* ---------------- boot ---------------- */
 $("#yearNow").textContent = new Date().getFullYear();
-applyTheme(store.get("theme", (window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light"));
+applyTheme(store.get("theme", "dark"));
 render();
