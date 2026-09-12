@@ -38,9 +38,8 @@ export const ICON = {
   chevron: '<path d="M9 5l7 7-7 7"/>',
 };
 
-export const svg = (name, cls = "") =>
-  `<svg viewBox="0 0 24 24" class="${cls}" fill="none" stroke="currentColor" stroke-width="1.8"
-        stroke-linecap="round" stroke-linejoin="round">${ICON[name] || ""}</svg>`;
+export const svg = (name, cls = "", size = 14) =>
+  `<svg viewBox="0 0 24 24" width="${size}" height="${size}" class="ico ico-${name} ${cls}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0">${ICON[name] || ""}</svg>`;
 
 /* Property photos live on the website, so a picture swapped in the admin
    panel shows up in the app without shipping a new build. */
