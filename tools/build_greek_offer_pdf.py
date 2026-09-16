@@ -80,7 +80,7 @@ def build():
     c.drawString(M, y, "Mr Chinwike Ogbunugafor and Co.")
     y -= 4.5 * mm
     c.setFillColor(MUTED)
-    c.drawString(M, y, "100% owners of the company")
+    c.drawString(M, y, "100% owners of Jollof Living")
     y -= 10 * mm
 
     c.setFillColor(INK)
@@ -91,10 +91,16 @@ def build():
     mw = W - 2 * M
     y = para(
         c, M, y,
-        "Following our meetings, Helikon Consortium hereby offers to buy ninety per cent (90%) of the entire issued share capital of the company from you and your co-owners.",
+        "Following our meetings, Helikon Consortium hereby offers to buy ninety per cent (90%) of the entire issued share capital of Jollof Living from you and your co-owners.",
         mw,
     )
-    y -= 4 * mm
+    y -= 3 * mm
+    y = para(
+        c, M, y,
+        "The purchase covers the company and all of its assets, including without limitation: (1) all digital products and infrastructure — domain names and subdomains, websites, mobile applications, source code and repositories, databases and backups, server and cloud infrastructure, hosting and registrar accounts, SSL/TLS and other digital security certificates, email and social-media accounts, app-store listings, APIs, software licences and administrative access; and (2) all intellectual property — trademarks, trade names, logos, brand assets, trade dress, copyrights, design rights, patents and patent applications, know-how and goodwill in the Jollof Living name.",
+        mw, 9.5, 12.5,
+    )
+    y -= 3 * mm
     y = para(
         c, M, y,
         "Price: ₦2.88 billion (US$1.80 million), being eighteen per cent (18%) of the Year-3 enterprise value of ₦16 billion in the financial projections we reviewed. Cash at closing, in USD or NGN. You retain ten per cent (10%) as ordinary shares. No earn-out, no further cash.",
@@ -135,7 +141,7 @@ def build():
     y -= 6 * mm
     y = para(
         c, M, y,
-        "We, being the 100% owners, accept Helikon Consortium’s offer of 16 September 2026 to purchase 90% of the company for ₦2.88 billion (US$1.80 million), we retaining 10%, with Mr Chinwike Ogbunugafor as CTO for 18 months at ₦500,000 per month. We acknowledge the offer is final and will not be negotiated further.",
+        "We, being the 100% owners of Jollof Living, accept Helikon Consortium’s offer of 16 September 2026 to purchase 90% of Jollof Living, including all digital products and intellectual property listed in that letter, for ₦2.88 billion (US$1.80 million), we retaining 10%, with Mr Chinwike Ogbunugafor as CTO for 18 months at ₦500,000 per month. We acknowledge the offer is final and will not be negotiated further.",
         mw, 9, 12.5,
     )
     y -= 12 * mm

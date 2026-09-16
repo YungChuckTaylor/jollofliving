@@ -77,7 +77,7 @@ def build():
 
     p(doc, "PRIVATE & CONFIDENTIAL", size=11, bold=True, color=ink, space_after=10)
     p(doc, "Mr Chinwike Ogbunugafor and Co.", size=11, color=ink, space_after=0)
-    p(doc, "100% owners of the company", size=11, color=muted, space_after=14)
+    p(doc, "100% owners of Jollof Living", size=11, color=muted, space_after=14)
     p(doc, "Dear Mr Ogbunugafor,", size=11, color=ink, space_after=10)
 
     body = [
@@ -102,7 +102,7 @@ def build():
 
     p(
         doc,
-        "We, being the 100% owners, accept Helikon Consortium’s offer of 16 September 2026 to purchase 90% of the company for ₦2.88 billion (US$1.80 million), we retaining 10%, with Mr Chinwike Ogbunugafor as CTO for 18 months at ₦500,000 per month. We acknowledge the offer is final and will not be negotiated further.",
+        "We, being the 100% owners of Jollof Living, accept Helikon Consortium’s offer of 16 September 2026 to purchase 90% of Jollof Living, including all digital products and intellectual property listed in that letter, for ₦2.88 billion (US$1.80 million), we retaining 10%, with Mr Chinwike Ogbunugafor as CTO for 18 months at ₦500,000 per month. We acknowledge the offer is final and will not be negotiated further.",
         size=10,
         color=ink,
         space_after=22,
